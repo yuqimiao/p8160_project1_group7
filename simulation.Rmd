@@ -34,7 +34,9 @@ output:
 * response : the simulated response data
 * c : c is specified or calculated
 * percentage: scaled percentage
-
+* lr_model : the fitted linear regression model
+* step_model : the fitted stepwise forward model
+* lasso_model: the fitted lasso model
 
 The relationship between c and beta:
 If c is specified and beta is NULL, then the function will calculate different zone for beta, and simulate beta from the calculated zone by percentage.
@@ -67,7 +69,6 @@ simulation <- function(n, p, percentage, c = 1, mu = 1, sigma = 0.5, beta = NULL
   if (length(beta) > 0 && length(beta) != p) {
     stop("#Features is not consistent with #coefficient")
   }
-  print(percentage < 0)
   if (sum(percentage < 0)) {
     stop("percentage cannot be negative")
   }
@@ -109,6 +110,10 @@ simulation <- function(n, p, percentage, c = 1, mu = 1, sigma = 0.5, beta = NULL
     weak_beta = runif(p - as.integer(strong * p) - as.integer(weak_corr * p), min = 0.001, max = c * sqrt(log(p) / n))
     
     beta = c(strong_beta, weak_corr_beta, weak_beta)
+    
+    beta_sign = runif(length(beta), -1, 1)
+    beta_sign = beta_sign / abs(beta_sign)
+    beta = beta * beta_sign
   }
   
   # calculate response variable
@@ -124,7 +129,7 @@ simulation <- function(n, p, percentage, c = 1, mu = 1, sigma = 0.5, beta = NULL
   
   # collect beta as tibble
   beta_result = tibble(
-      "real beta" = beta,
+      "true beta" = beta,
       "lr coefficient" = coefficients(lr)[2:length(coefficients(lr))],
       "step coefficient" = coefficients(step_lr)[2:length(coefficients(step_lr))],
       "lasso coefficient" = as.vector(coefficients(lasso))[2:length(coefficients(lasso))],
@@ -133,7 +138,7 @@ simulation <- function(n, p, percentage, c = 1, mu = 1, sigma = 0.5, beta = NULL
     replace(is.na(.), 0)
   
   # collect output
-  result = list(beta = beta_result, data = data, response = response, c = c, percentage = c(strong, weak_corr, weak_no_corr))
+  result = list(beta = beta_result, data = data, response = response, c = c, percentage = c(strong, weak_corr, weak_no_corr), lr_model = lr, step_model = step_lr, lasso_model = lasso)
   return(result)
 }
 
