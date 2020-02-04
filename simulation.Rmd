@@ -1,0 +1,145 @@
+---
+title: "Simulation"
+author: "Jungang Zou"
+date: "2/4/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+library(MASS)
+library(glmnet)
+library(tidyverse)
+```
+
+
+
+# Simulation Function:
+
+input:
+
+* n(required) : #sample
+* p(required) : #feature
+* percentage(required): vector of length 3, percentage of strong, weak_correlated and weak data, must be positive, not need to be sum up to 1
+* c : to calculate the zone of beta, if beta is specified, this parameter has no use
+* mu : the mean of strong and weak_correlated data
+* sigma : the covariance of strong and weak_correlated data
+* beta : true beta. If beta is not specified, beta will be sample by formulas of c
+* seed : set the random seed.
+* error_sigma : the variance of error term
+
+output:
+
+* beta : a tibble consist of true beta, lr beta, step beta, lasso beta, beta type
+* data : the simulated data
+* response : the simulated response data
+* c : c is specified or calculated
+* percentage: scaled percentage
+
+
+The relationship between c and beta:
+If c is specified and beta is NULL, then the function will calculate different zone for beta, and simulate beta from the calculated zone by percentage.
+If beta is specified, c will be no use. And new c will be calculate in function.
+
+
+
+```{r}
+
+# this function is to calculate lasso function by cv
+lasso_function = function(data, response){
+  lambda_best = glmnet::cv.glmnet(x = data, y = response, alpha = 1, nfolds = 10) #cv to find best lambda
+  lambda = lambda_best$lambda.min #best lambda
+  lasso_best_fit = glmnet::glmnet(x = data, y = response, alpha = 1, nlambda = 1, lambda = lambda) #fit the lasso model
+  lasso_best_fit
+}
+
+
+# This is the main function of simulation
+simulation <- function(n, p, percentage, c = 1, mu = 1, sigma = 0.5, beta = NULL, seed = 100, error_sigma = 1){
+  set.seed(seed) 
+  
+  # check input
+  if (length(percentage) != 3) {
+    stop("please send the 3 samples percentage")
+  }
+  if (p > n) {
+    stop("#Features are more than #samples")
+  }
+  if (length(beta) > 0 && length(beta) != p) {
+    stop("#Features is not consistent with #coefficient")
+  }
+  print(percentage < 0)
+  if (sum(percentage < 0)) {
+    stop("percentage cannot be negative")
+  }
+  
+  # scale percentage
+  strong = percentage[1] / sum(percentage)
+  weak_corr = percentage[2] / sum(percentage)
+  weak_no_corr = percentage[3] / sum(percentage)
+  corr_feature = as.integer((strong + weak_corr) * p)
+  no_corr_feature = p - corr_feature
+  
+  
+  # simulate correlated data from multivariate Guassian distribution
+  data = mvrnorm(n = n, mu = rep(mu, corr_feature), Sigma = matrix(rep(sigma, corr_feature * corr_feature), nrow = corr_feature, ncol = corr_feature))
+  
+  # simulate uncorrelated data
+  for (i in 1:no_corr_feature) {
+    no_corr = rnorm(n, mu, sigma)
+    data = cbind(data, no_corr)
+  }
+  
+  # set the variable names
+  data_columns_names = paste("V", 1:p)
+  colnames(data) <- data_columns_names
+  
+  
+  # if beta is specified,  calculate c
+  if (length(beta) != 0) {
+    strong_beta = sort(beta, decreasing = TRUE)[as.integer(strong * p) + 1]
+    c = strong_beta / sqrt(log(p) / n)
+  }
+  
+  # if beta is not specified, simulate beta by c
+  if (length(beta) == 0) {
+    strong_beta = runif(as.integer(strong * p), min = c * sqrt(log(p) / n) + 0.001, max = 9999)
+    
+    weak_corr_beta = runif(as.integer(weak_corr * p), min = 0.001, max = c * sqrt(log(p) / n))
+    
+    weak_beta = runif(p - as.integer(strong * p) - as.integer(weak_corr * p), min = 0.001, max = c * sqrt(log(p) / n))
+    
+    beta = c(strong_beta, weak_corr_beta, weak_beta)
+  }
+  
+  # calculate response variable
+  error_term = rnorm(n, mean = 0, sd = error_sigma)
+  response = data %*% beta + error_term
+  
+  
+  # regression
+  lr = lm(response ~ data)
+  step_lr = step(lm(response ~ data), direction = "forward")
+  lasso = lasso_function(data, response)
+
+  
+  # collect beta as tibble
+  beta_result = tibble(
+      "real beta" = beta,
+      "lr coefficient" = coefficients(lr)[2:length(coefficients(lr))],
+      "step coefficient" = coefficients(step_lr)[2:length(coefficients(step_lr))],
+      "lasso coefficient" = as.vector(coefficients(lasso))[2:length(coefficients(lasso))],
+      "type" = c(rep("strong", as.integer(strong * p)), rep("weak_corr", as.integer(weak_corr * p)), rep("weak", p - as.integer(strong * p) - as.integer(weak_corr * p)))
+      ) %>% 
+    replace(is.na(.), 0)
+  
+  # collect output
+  result = list(beta = beta_result, data = data, response = response, c = c, percentage = c(strong, weak_corr, weak_no_corr))
+  return(result)
+}
+
+
+a = simulation(100, 10, c(1,3, 2))
+
+
+a
+```
