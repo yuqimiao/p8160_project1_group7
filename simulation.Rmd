@@ -23,7 +23,7 @@ input:
 * c : to calculate the zone of beta, if beta is specified, this parameter has no use
 * mu : the mean of strong and weak_correlated data
 * sigma : the covariance of strong and weak_correlated data
-* beta : true beta. If beta is not specified, beta will be sample by formulas of c
+* beta : true beta. If beta is not specified, beta will be sampled by formulas of c
 * seed : set the random seed.
 * error_sigma : the variance of error term
 
@@ -91,7 +91,7 @@ simulation <- function(n, p, percentage, c = 1, mu = 1, sigma = 0.5, beta = NULL
   }
   
   # set the variable names
-  data_columns_names = paste("V", 1:p)
+  data_columns_names = paste("V", 1:p, sep = "")
   colnames(data) <- data_columns_names
   
   
@@ -103,14 +103,15 @@ simulation <- function(n, p, percentage, c = 1, mu = 1, sigma = 0.5, beta = NULL
   
   # if beta is not specified, simulate beta by c
   if (length(beta) == 0) {
-    strong_beta = runif(as.integer(strong * p), min = c * sqrt(log(p) / n) + 0.001, max = 9999)
+    strong_beta = runif(as.integer(strong * p), min = c * sqrt(log(p) / n), max = c * sqrt(p / n))
     
-    weak_corr_beta = runif(as.integer(weak_corr * p), min = 0.001, max = c * sqrt(log(p) / n))
+    weak_corr_beta = runif(as.integer(weak_corr * p), min = 0, max = c * sqrt(log(p) / n))
     
-    weak_beta = runif(p - as.integer(strong * p) - as.integer(weak_corr * p), min = 0.001, max = c * sqrt(log(p) / n))
+    weak_beta = runif(p - as.integer(strong * p) - as.integer(weak_corr * p), min = 0, max = c * sqrt(log(p) / n))
     
     beta = c(strong_beta, weak_corr_beta, weak_beta)
     
+    # randomly make some beta negative 
     beta_sign = runif(length(beta), -1, 1)
     beta_sign = beta_sign / abs(beta_sign)
     beta = beta * beta_sign
