@@ -13,6 +13,104 @@ library(tidyverse)
 
 
 
+# correlation_process function
+Do not call this function out of simulation function
+
+
+```{r}
+
+# this function is to calculate lasso function by cv
+lasso_function = function(data, response){
+  lambda_best = glmnet::cv.glmnet(x = data, y = response, alpha = 1, nfolds = 10) #cv to find best lambda
+  lambda = lambda_best$lambda.min #best lambda
+  lasso_best_fit = glmnet::glmnet(x = data, y = response, alpha = 1, nlambda = 1, lambda = lambda) #fit the lasso model
+  lasso_best_fit
+}
+
+# this function is to calculate correlation matrix
+correlation_process = function(parameters, type) {
+  
+  # function of density type
+  correlation_density = function(parameters) {
+    corr_matrix = parameters$corr_matrix
+    strong = as.integer(parameters$strong * nrow(corr_matrix))
+    weak_corr = as.integer(parameters$weak_corr * nrow(corr_matrix))
+    weak_no_corr = as.integer(parameters$weak_no_corr * nrow(corr_matrix))
+    density_num = as.integer(min(parameters$density, 1) * weak_corr * strong)
+    for (i in (strong + 1):(strong + weak_corr)) {
+      changed = FALSE
+      for (j in 1:strong) {
+        changed = rbernoulli(1)
+        if (changed) {
+          corr_matrix[i, j] = parameters$corr
+          corr_matrix[j, i] = parameters$corr
+          density_num = density_num - 1
+          break
+        }
+      }
+      if (!changed) {
+         corr_matrix[i, 1] = parameters$corr
+         corr_matrix[1, i] = parameters$corr
+         density_num = density_num - 1
+      }
+    }
+    changed_rate = max(density_num / (strong * weak_corr - weak_corr), 0)
+    for (i in (strong + 1):(strong + weak_corr)) {
+      for (j in 1:strong) {
+        if (corr_matrix[i, j] == 0.5) {
+          next
+        }
+        changed = rbernoulli(1, changed_rate)
+        if (changed) {
+          corr_matrix[i, j] = parameters$corr
+          corr_matrix[j, i] = parameters$corr
+          density_num = density_num - 1
+        }
+      }
+    }
+    return(corr_matrix)
+  }
+  
+  # function of unique correlation.
+  correlation_unique = function(parameters) {
+    corr_matrix = parameters$corr_matrix
+    strong = as.integer(parameters$strong * nrow(corr_matrix))
+    weak_corr = as.integer(parameters$weak_corr * nrow(corr_matrix))
+    weak_no_corr = as.integer(parameters$weak_no_corr * nrow(corr_matrix))
+    for (i in (strong + 1):(strong + weak_corr)) {
+      changed = FALSE
+      for (j in 1:strong) {
+        changed = rbernoulli(1)
+        if (changed) {
+          corr_matrix[i, j] = parameters$corr
+          corr_matrix[j, i] = parameters$corr
+          break
+        }
+      }
+      if (!changed) {
+         corr_matrix[i, 1] = parameters$corr
+         corr_matrix[1, i] = parameters$corr
+      }
+    }
+    return(corr_matrix)
+  }
+  
+  if (type == "density") {
+    return(correlation_density(parameters))
+  }
+  
+  if (type == "unique") {
+    return(correlation_unique(parameters))
+  }
+  
+}
+
+```
+
+
+
+
+
 # Simulation Function:
 
 input:
@@ -26,6 +124,9 @@ input:
 * beta : true beta. If beta is not specified, beta will be sampled by formulas of c
 * seed : set the random seed.
 * error_sigma : the variance of error term
+* correlation : the correlation between strong variables and weak_corr variables
+* type : the type of correlation, you can specify it in {"unique", "density"}
+* weak_corr_density : the density of correlation. The number of correlation will be density * #strong * # weak_corr. Randomly select correlation.  If type is not "density", this parameter will be no use.
 
 output:
 
@@ -37,26 +138,21 @@ output:
 * lr_model : the fitted linear regression model
 * step_model : the fitted stepwise forward model
 * lasso_model: the fitted lasso model
+* cov_matrix: covariance matrix 
 
 The relationship between c and beta:
 If c is specified and beta is NULL, then the function will calculate different zone for beta, and simulate beta from the calculated zone by percentage.
 If beta is specified, c will be no use. And new c will be calculate in function.
 
-
+Correlation type:
+If type is "unique", each weak_corr variable will be randomly correlate to only 1 strong variables.
+If type is "density", each weak_corr variable will be randomly correlate to at least 1 strong variables. All the correlation will be sum up to weak_corr_density * #strong * #weak_corr.
 
 ```{r}
 
-# this function is to calculate lasso function by cv
-lasso_function = function(data, response){
-  lambda_best = glmnet::cv.glmnet(x = data, y = response, alpha = 1, nfolds = 10) #cv to find best lambda
-  lambda = lambda_best$lambda.min #best lambda
-  lasso_best_fit = glmnet::glmnet(x = data, y = response, alpha = 1, nlambda = 1, lambda = lambda) #fit the lasso model
-  lasso_best_fit
-}
-
 
 # This is the main function of simulation
-simulation <- function(n, p, percentage, c = 1, mu = 1, sigma = 0.5, beta = NULL, seed = 100, error_sigma = 1){
+simulation <- function(n, p, percentage, c = 1, mu = 1, sigma = 0.5, beta = NULL, seed = 100, error_sigma = 1, correlation = 0.5, type = "density", weak_corr_density = 0.5) {
   set.seed(seed) 
   
   # check input
@@ -72,7 +168,10 @@ simulation <- function(n, p, percentage, c = 1, mu = 1, sigma = 0.5, beta = NULL
   if (sum(percentage < 0)) {
     stop("percentage cannot be negative")
   }
-  
+  if (weak_corr_density < 0 || weak_corr_density > 1) {
+    stop("weak_corr_density must be in [0, 1]")
+  }
+    
   # scale percentage
   strong = percentage[1] / sum(percentage)
   weak_corr = percentage[2] / sum(percentage)
@@ -80,15 +179,33 @@ simulation <- function(n, p, percentage, c = 1, mu = 1, sigma = 0.5, beta = NULL
   corr_feature = as.integer((strong + weak_corr) * p)
   no_corr_feature = p - corr_feature
   
+  num_corr_feature = as.integer(weak_corr_density * weak_corr * strong * p * p)
+  
+  sigma_matrix = matrix(rep(0, p * p), nrow = p, ncol = p)
+  diag(sigma_matrix) = 1
+  
+  parameters = list(corr_matrix = sigma_matrix, strong = strong, weak_corr = weak_corr, weak_no_corr = weak_no_corr, density = weak_corr_density, corr = correlation)
+  
+  sigma_matrix = correlation_process(parameters, type)
+  #for (i in 1:as.integer(strong * p)) {
+  #  sigma_matrix[i][i + as.integer(strong * p)] = 0.5
+  #  sigma_matrix[i + as.integer(strong * p)][i] = 0.5
+  #}
+  #print(sigma_matrix)
   
   # simulate correlated data from multivariate Guassian distribution
-  data = mvrnorm(n = n, mu = rep(mu, corr_feature), Sigma = matrix(rep(sigma, corr_feature * corr_feature), nrow = corr_feature, ncol = corr_feature))
+  #print(correlation_process(parameters, "density"))
+  #return(correlation_process(parameters, "density"))
+  #print(sigma_matrix * sigma)
+  #return(sigma_matrix)
+  
+  data = mvrnorm(n = n, mu = rep(mu, p), Sigma = sigma_matrix * sigma, tol = 1)
   
   # simulate uncorrelated data
-  for (i in 1:no_corr_feature) {
-    no_corr = rnorm(n, mu, sigma)
-    data = cbind(data, no_corr)
-  }
+  #for (i in 1:no_corr_feature) {
+  #  no_corr = rnorm(n, mu, sigma)
+  #  data = cbind(data, no_corr)
+  #}
   
   # set the variable names
   data_columns_names = paste("V", 1:p, sep = "")
@@ -139,12 +256,12 @@ simulation <- function(n, p, percentage, c = 1, mu = 1, sigma = 0.5, beta = NULL
     replace(is.na(.), 0)
   
   # collect output
-  result = list(beta = beta_result, data = data, response = response, c = c, percentage = c(strong, weak_corr, weak_no_corr), lr_model = lr, step_model = step_lr, lasso_model = lasso)
+  result = list(beta = beta_result, data = data, response = response, c = c, percentage = c(strong, weak_corr, weak_no_corr), lr_model = lr, step_model = step_lr, lasso_model = lasso, cov_matrix = sigma_matrix * sigma)
   return(result)
 }
 
 
-a = simulation(10, 20, c(1,3, 2))
+a = simulation(100, 18, c(1,3, 2))
 
 
 a
