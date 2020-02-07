@@ -104,7 +104,6 @@ correlation_process = function(parameters, type) {
     if (strong < weak_corr) {
       stop("#strong must be greater than #weak_corr")
     }
-    print(weak_no_corr)
     for (i in 1:weak_corr) {
       corr_matrix[i + strong, i] = parameters$corr
       corr_matrix[i, i + strong] = parameters$corr
@@ -135,6 +134,7 @@ correlation_process = function(parameters, type) {
 
 input:
 
+* time(required) : #simulation related to same parameters
 * n(required) : #sample
 * p(required) : #feature
 * percentage(required): vector of length 3, percentage of strong, weak_correlated and weak data, must be positive, not need to be sum up to 1
@@ -151,13 +151,8 @@ input:
 output:
 
 * beta : a tibble consist of true beta, lr beta, step beta, lasso beta, beta type
-* data : the simulated data
-* response : the simulated response data
 * c : c is specified or calculated
 * percentage: scaled percentage
-* lr_model : the fitted linear regression model
-* step_model : the fitted stepwise forward model
-* lasso_model: the fitted lasso model
 * cov_matrix: covariance matrix 
 
 The relationship between c and beta:
@@ -173,7 +168,7 @@ If type is "definite", each weak_corr variable will be assign to only 1 differen
 
 
 # This is the main function of simulation
-simulation <- function(n, p, percentage, c = 1, mu = 1, sigma = 0.5, beta = NULL, seed = 100, error_sigma = 1, correlation = 0.5, type = "definite", weak_corr_density = 0.5) {
+simulation <- function(time, n, p, percentage, c = 1, mu = 1, sigma = 0.5, beta = NULL, seed = 100, error_sigma = 1, correlation = 0.5, type = "density", weak_corr_density = 0.5) {
   set.seed(seed) 
   
   # check input
@@ -220,17 +215,6 @@ simulation <- function(n, p, percentage, c = 1, mu = 1, sigma = 0.5, beta = NULL
   #print(sigma_matrix * sigma)
   #return(sigma_matrix)
   
-  data = mvrnorm(n = n, mu = rep(mu, p), Sigma = sigma_matrix * sigma)
-  
-  # simulate uncorrelated data
-  #for (i in 1:no_corr_feature) {
-  #  no_corr = rnorm(n, mu, sigma)
-  #  data = cbind(data, no_corr)
-  #}
-  
-  # set the variable names
-  data_columns_names = paste("V", 1:p, sep = "")
-  colnames(data) <- data_columns_names
   
   
   # if beta is specified,  calculate c
@@ -256,33 +240,56 @@ simulation <- function(n, p, percentage, c = 1, mu = 1, sigma = 0.5, beta = NULL
   }
   
   # calculate response variable
-  error_term = rnorm(n, mean = 0, sd = error_sigma)
-  response = data %*% beta + error_term
+  beta_list = list()
+  
+  for (j in 1:time) {
+    set.seed(time + j)
+    
+    data = mvrnorm(n = n, mu = rep(mu, p), Sigma = sigma_matrix * sigma, tol = 1)
   
   
-  # regression
-  lr = lm(response ~ data)
-  step_lr = step(lm(response ~ data), direction = "forward")
-  lasso = lasso_function(data, response)
+  
+    # set the variable names
+    data_columns_names = paste("V", 1:p, sep = "")
+    colnames(data) <- data_columns_names
+    
+    
+    error_term = rnorm(n, mean = 0, sd = error_sigma)
+    response = data %*% beta + error_term
+    # regression
+    lr = lm(response ~ data)
+    step_lr = step(lm(response ~ data), direction = "forward")
+    lasso = lasso_function(data, response)
 
   
-  # collect beta as tibble
-  beta_result = tibble(
-      "true beta" = beta,
-      "lr coefficient" = coefficients(lr)[2:length(coefficients(lr))],
-      "step coefficient" = coefficients(step_lr)[2:length(coefficients(step_lr))],
-      "lasso coefficient" = as.vector(coefficients(lasso))[2:length(coefficients(lasso))],
-      "type" = c(rep("strong", as.integer(strong * p)), rep("weak_corr", as.integer(weak_corr * p)), rep("weak", p - as.integer(strong * p) - as.integer(weak_corr * p)))
-      ) %>% 
-    replace(is.na(.), 0)
+    # collect beta as tibble
+    beta_result = tibble(
+        "true beta" = beta,
+        "lr coefficient" = coefficients(lr)[2:length(coefficients(lr))],
+        "step coefficient" = coefficients(step_lr)[2:length(coefficients(step_lr))],
+        "lasso coefficient" = as.vector(coefficients(lasso))[2:length(coefficients(lasso))],
+        "type" = c(rep("strong", as.integer(strong * p)), rep("weak_corr", as.integer(weak_corr * p)), rep("weak", p - as.integer(strong * p) - as.integer(weak_corr * p)))
+        ) %>% 
+      replace(is.na(.), 0)
+    
+    beta_list[[j]] = beta_result
+  }
+  
+  
+  
+  
   
   # collect output
-  result = list(beta = beta_result, data = data, response = response, c = c, percentage = c(strong, weak_corr, weak_no_corr), lr_model = lr, step_model = step_lr, lasso_model = lasso, cov_matrix = sigma_matrix * sigma)
+  #result = list(beta = beta_list, data = data, response = response, c = c, percentage = c(strong, weak_corr, weak_no_corr), lr_model = lr, step_model = step_lr, lasso_model = lasso, cov_matrix = sigma_matrix * sigma)
+  result = list(beta = beta_list, c = c, percentage = c(strong, weak_corr, weak_no_corr), cov_matrix = sigma_matrix * sigma)
   return(result)
 }
 
 
-a = simulation(100, 40, c(6, 3, 2))
+
+
+
+a = simulation(10, 100, 40, c(6, 3, 2))
 
 
 a
