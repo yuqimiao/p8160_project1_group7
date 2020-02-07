@@ -95,6 +95,22 @@ correlation_process = function(parameters, type) {
     return(corr_matrix)
   }
   
+  
+  correlation_definite = function(parameters) {
+    corr_matrix = parameters$corr_matrix
+    strong = as.integer(parameters$strong * nrow(corr_matrix))
+    weak_corr = as.integer(parameters$weak_corr * nrow(corr_matrix))
+    weak_no_corr = as.integer(parameters$weak_no_corr * nrow(corr_matrix))
+    if (strong < weak_corr) {
+      stop("#strong must be greater than #weak_corr")
+    }
+    for (i in 1:weak_corr) {
+      corr_matrix[i + strong][i] = parameters$corr
+      corr_matrix[i][i + strong] = parameters$corr
+    }
+    return(corr_matrix)
+  }
+  
   if (type == "density") {
     return(correlation_density(parameters))
   }
@@ -103,6 +119,9 @@ correlation_process = function(parameters, type) {
     return(correlation_unique(parameters))
   }
   
+  if (type == "definite") {
+    return(correlation_definite(parameters))
+  }
 }
 
 ```
@@ -125,7 +144,7 @@ input:
 * seed : set the random seed.
 * error_sigma : the variance of error term
 * correlation : the correlation between strong variables and weak_corr variables
-* type : the type of correlation, you can specify it in {"unique", "density"}
+* type : the type of correlation, you can specify it in {"unique", "density", "definite"}
 * weak_corr_density : the density of correlation. The number of correlation will be density * #strong * # weak_corr. Randomly select correlation.  If type is not "density", this parameter will be no use.
 
 output:
@@ -147,12 +166,13 @@ If beta is specified, c will be no use. And new c will be calculate in function.
 Correlation type:
 If type is "unique", each weak_corr variable will be randomly correlate to only 1 strong variables.
 If type is "density", each weak_corr variable will be randomly correlate to at least 1 strong variables. All the correlation will be sum up to weak_corr_density * #strong * #weak_corr.
+If type is "definite", each weak_corr variable will be assign to only 1 different strong variables. If #strong < #weak_corr, some error will be occurred.
 
 ```{r}
 
 
 # This is the main function of simulation
-simulation <- function(n, p, percentage, c = 1, mu = 1, sigma = 0.5, beta = NULL, seed = 100, error_sigma = 1, correlation = 0.5, type = "density", weak_corr_density = 0.5) {
+simulation <- function(n, p, percentage, c = 1, mu = 1, sigma = 0.5, beta = NULL, seed = 100, error_sigma = 1, correlation = 0.5, type = "definite", weak_corr_density = 0.5) {
   set.seed(seed) 
   
   # check input
@@ -199,7 +219,7 @@ simulation <- function(n, p, percentage, c = 1, mu = 1, sigma = 0.5, beta = NULL
   #print(sigma_matrix * sigma)
   #return(sigma_matrix)
   
-  data = mvrnorm(n = n, mu = rep(mu, p), Sigma = sigma_matrix * sigma, tol = 1)
+  data = mvrnorm(n = n, mu = rep(mu, p), Sigma = sigma_matrix * sigma)
   
   # simulate uncorrelated data
   #for (i in 1:no_corr_feature) {
@@ -261,7 +281,7 @@ simulation <- function(n, p, percentage, c = 1, mu = 1, sigma = 0.5, beta = NULL
 }
 
 
-a = simulation(100, 18, c(1,3, 2))
+a = simulation(100, 40, c(10, 3, 2))
 
 
 a
