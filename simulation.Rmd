@@ -104,9 +104,10 @@ correlation_process = function(parameters, type) {
     if (strong < weak_corr) {
       stop("#strong must be greater than #weak_corr")
     }
+    print(weak_no_corr)
     for (i in 1:weak_corr) {
-      corr_matrix[i + strong][i] = parameters$corr
-      corr_matrix[i][i + strong] = parameters$corr
+      corr_matrix[i + strong, i] = parameters$corr
+      corr_matrix[i, i + strong] = parameters$corr
     }
     return(corr_matrix)
   }
@@ -281,7 +282,7 @@ simulation <- function(n, p, percentage, c = 1, mu = 1, sigma = 0.5, beta = NULL
 }
 
 
-a = simulation(100, 40, c(10, 3, 2))
+a = simulation(100, 40, c(6, 3, 2))
 
 
 a
