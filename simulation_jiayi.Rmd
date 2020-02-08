@@ -328,6 +328,7 @@ for (sample_size in c(200, 1000, 5000)) {
   }
 }
 # saveRDS(beta_results, file = "beta_estimates.rds")
+# beta_results <- readRDS( "beta_estimates.rds")
 # saveRDS(fitted_results, file = "fitted_values.rds")
 
 ```
@@ -337,7 +338,7 @@ Get measurement scores
 get_measures <- function(beta_df){
     # recall, precision, F1
     recall = beta_df %>% filter(type != "null") %>% group_by(method, type,n, sigma) %>% summarize(recall = mean(correct))
-    precision = beta_df %>% filter(correct == 1) %>% mutate(not_null = ifelse(type == "null",0,1)) %>% group_by(method, type,n, sigma) %>% summarize(precision = mean(not_null))
+    precision = beta_df %>% filter(coefficient != 0) %>% mutate(not_null = ifelse(type == "null",0,1)) %>% group_by(method,n, sigma) %>% summarize(precision = mean(not_null))
     
     # output a tibble
     return(left_join(recall, precision, by = c("method","type", "n", "sigma")) %>% 
