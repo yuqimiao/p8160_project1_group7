@@ -292,7 +292,7 @@ simulation <- function(time, n, p, percentage, c = 1, mu = 1, sigma = 0.5, beta 
       pivot_longer(step:lasso, names_to  = "method", values_to = "coefficient") %>% 
       mutate(correct = ifelse((type != "null"& coefficient != 0) | 
                                      (type == "null" & coefficient == 0), 1, 0 )) %>% 
-      mutate(n = sample_size, sigma = sigma, idx = j) 
+      mutate(n = n, sigma = sigma, idx = j) 
     
     beta_list[[j]] = beta_result
     measures[[j]] = model_measures
@@ -330,6 +330,8 @@ for (sample_size in c(200, 1000, 5000)) {
 }
 # saveRDS(row_results, file = "beta_estimates.rds")
 
+    temp_results <- simulation(time = 100, n = 200, p = 200, percentage = c(5, 3, 2), 
+                           sigma = 0.3)
 ```
 
 Get measurement scores
