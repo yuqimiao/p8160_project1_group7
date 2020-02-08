@@ -287,7 +287,7 @@ simulation <- function(time, n, p, percentage, c = 1, mu = 1, sigma = 0.5, beta 
     
     # tidy beta result for later calculation of recall, precision, f1 score
     model_measures = beta_result %>% 
-      select(- lr) %>% 
+      dplyr::select(- lr) %>% 
       pivot_longer(step:lasso, names_to  = "method", values_to = "coefficient") %>% 
       mutate(correct = ifelse((type != "null"& coefficient != 0) | 
                                      (type == "null" & coefficient == 0), 1, 0 )) %>% 
@@ -337,20 +337,39 @@ Get measurement scores
 ```{r}
 get_measures <- function(beta_df){
     # recall, precision, F1
-    recall = beta_df %>% filter(type != "null") %>% group_by(method, type,n, sigma) %>% summarize(recall = mean(correct))
+    recall = beta_df %>% filter(type != "null") %>% group_by(method,n, sigma) %>% summarize(recall = mean(correct))
     precision = beta_df %>% filter(coefficient != 0) %>% mutate(not_null = ifelse(type == "null",0,1)) %>% group_by(method,n, sigma) %>% summarize(precision = mean(not_null))
-    
+    specificity = beta_df %>% filter(type == "null") %>% group_by(method,n, sigma) %>% summarize(specificity = mean(correct))
     # output a tibble
-    return(left_join(recall, precision, by = c("method","type", "n", "sigma")) %>% 
-             mutate(f1 = 2/(1/recall + 1/precision)))
+    return(left_join(recall, precision, by = c("method", "n", "sigma")) %>% 
+             left_join(specificity, by = c("method", "n", "sigma")) %>% 
+             mutate(f1 = 2/(1/recall + 1/precision))) 
 }
 
 measures_result = get_measures(beta_results[[1]])
 for(i in 2:length(beta_results)){
   measures_result = rbind(measures_result, get_measures(beta_results[[i]]))
 }
-measures_result$idx = rep(seq_len(100), each=6)
+measures_result$idx = rep( rep(seq_len(100), each=2), 6)
 # saveRDS(measures_result, file = "measurement_scores.rds")
+```
+
+
+Set error_sigma = 5
+```{r}
+beta_results <- list()
+fitted_results <- list()
+for (sample_size in c(200, 1000, 5000)) {
+  for (sigma in c(0.3, 0.8)) {
+    temp_results <- simulation(time = 100, n = sample_size, p = 200, percentage = c(5, 3, 2), 
+                           sigma = sigma, error_sigma = 5)
+    beta_results <- append(beta_results, temp_results$measures)
+    fitted_results <- append(fitted_results, temp_results$fitted)
+  }
+}
+saveRDS(beta_results, file = "./large_error/beta_estimates.rds")
+# beta_results <- readRDS( "beta_estimates.rds")
+saveRDS(fitted_results, file = "./large_error/fitted_values.rds")
 ```
 
 
