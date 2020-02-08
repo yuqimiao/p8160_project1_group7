@@ -243,8 +243,7 @@ simulation <- function(time, n, p, percentage, c = 1, mu = 1, sigma = 0.5, beta 
   beta_list = list()
   measures = list()
   fitted = list()
-  step_models = list()
-  lasso_models = list()
+
   
   for (j in 1:time) {
     set.seed(time + j)
@@ -297,21 +296,19 @@ simulation <- function(time, n, p, percentage, c = 1, mu = 1, sigma = 0.5, beta 
     beta_list[[j]] = beta_result
     measures[[j]] = model_measures
     fitted[[j]] = fitted_values
-    step_models[[j]] = step_lr
-    lasso_models[[j]] = lasso
   }
   
   
   # collect output
   #result = list(beta = beta_list, data = data, response = response, c = c, percentage = c(strong, weak_corr, weak_no_corr), lr_model = lr, step_model = step_lr, lasso_model = lasso, cov_matrix = sigma_matrix * sigma)
-  result = list(beta = beta_list, measures = measures, fitted = fitted, c = c, percentage = c(strong, weak_corr, weak_no_corr), cov_matrix = sigma_matrix * sigma, step_models = step_models, lasso_models = lasso_models)
+  result = list(beta = beta_list, measures = measures, fitted = fitted, c = c, percentage = c(strong, weak_corr, weak_no_corr), cov_matrix = sigma_matrix * sigma)
   return(result)
 }
 
 ```
 
 
-Save simulation results
+Save simulation results and fitted values
 ```{r}
 # default setting: 
 # strong:weak_corr:weak = 5:3:2
@@ -319,19 +316,20 @@ Save simulation results
 # factor to be investigated: n, correlation, error 
 
 
-# store all row results (including models, betas, predicted value etc.) in a list
-row_results <- list()
+# store beta estimates in a list
+beta_results <- list()
+fitted_results <- list()
 for (sample_size in c(200, 1000, 5000)) {
   for (sigma in c(0.3, 0.8)) {
     temp_results <- simulation(time = 100, n = sample_size, p = 200, percentage = c(5, 3, 2), 
                            sigma = sigma)
-    row_results <- append(row_results, temp_results)
+    beta_results <- append(beta_results, temp_results$measures)
+    fitted_results <- append(fitted_results, temp_results$fitted)
   }
 }
-# saveRDS(row_results, file = "beta_estimates.rds")
+# saveRDS(beta_results, file = "beta_estimates.rds")
+# saveRDS(fitted_results, file = "fitted_values.rds")
 
-    temp_results <- simulation(time = 100, n = 200, p = 200, percentage = c(5, 3, 2), 
-                           sigma = 0.3)
 ```
 
 Get measurement scores
@@ -346,23 +344,12 @@ get_measures <- function(beta_df){
              mutate(f1 = 2/(1/recall + 1/precision)))
 }
 
-measures_result = get_measures(row_results[[1]])
-for(i in 2:length(row_results)){
-  measures_result = rbind(measures_result, get_measures(row_results[[i]])) %>% mutate(idx = i)
+measures_result = get_measures(beta_results[[1]])
+for(i in 2:length(beta_results)){
+  measures_result = rbind(measures_result, get_measures(beta_results[[i]]))
 }
+measures_result$idx = rep(seq_len(100), each=6)
 # saveRDS(measures_result, file = "measurement_scores.rds")
 ```
 
-Get fitted values
-```{r}
-fitted_results <- list()
-for (sample_size in c(200, 1000, 5000)) {
-  for (sigma in c(0.3, 0.8)) {
-    temp_results <- simulation(time = 100, n = sample_size, p = 200, percentage = c(5, 3, 2), 
-                           sigma = sigma)$fitted
-    fitted_results <- append(fitted_results, temp_results)
-  }
-}
-# saveRDS(fitted_results, file = "fitted_values.rds")
-```
 
