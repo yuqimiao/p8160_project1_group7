@@ -223,13 +223,15 @@ simulation <- function(time, n, p, percentage, c = 1, mu = 1, sigma = 0.5, beta 
   
   # if beta is not specified, simulate beta by c
   if (length(beta) == 0) {
-    strong_beta = runif(as.integer(strong * p), min = c * sqrt(log(p) / n), max = c * sqrt(p / n))
+    strong_beta = runif(as.integer(strong * 0.5* p), min = c * sqrt(log(p) / n), max = c * sqrt(p / n))
     
-    weak_corr_beta = runif(as.integer(weak_corr * p), min = 0, max = c * sqrt(log(p) / n))
+    weak_corr_beta = runif(as.integer(weak_corr *0.5* p), min = 0, max = c * sqrt(log(p) / n))
     
-    weak_beta = runif(p - as.integer(strong * p) - as.integer(weak_corr * p), min = 0, max = c * sqrt(log(p) / n))
+    weak_beta = runif(0.5*p - as.integer(strong * 0.5*p) - as.integer(weak_corr * 0.5* p), min = 0, max = c * sqrt(log(p) / n))
     
-    beta = c(strong_beta, weak_corr_beta, weak_beta)
+    null_beta = rep(0, p - length(strong_beta)- length(weak_corr_beta) - length(weak_beta))
+    
+    beta = c(strong_beta, weak_corr_beta, weak_beta, null_beta)
     
     # randomly make some beta negative 
     beta_sign = runif(length(beta), -1, 1)
@@ -241,6 +243,8 @@ simulation <- function(time, n, p, percentage, c = 1, mu = 1, sigma = 0.5, beta 
   beta_list = list()
   measures = list()
   fitted = list()
+  step_models = list()
+  lasso_models = list()
   
   for (j in 1:time) {
     set.seed(time + j)
@@ -264,7 +268,8 @@ simulation <- function(time, n, p, percentage, c = 1, mu = 1, sigma = 0.5, beta 
     # get fitted values
     step_fitted = fitted.values(step_lr)
     lasso_fitted = predict(lasso, data) %>% as.vector()
-    fitted_values = tibble(true_y = as.vector(response), 
+    fitted_values = tibble(idx = j,
+                            true_y = as.vector(response), 
                            step_fitted = step_fitted,
                            lasso_fitted =lasso_fitted,
                            n = n, p = p,
@@ -272,32 +277,34 @@ simulation <- function(time, n, p, percentage, c = 1, mu = 1, sigma = 0.5, beta 
   
     # collect beta as tibble
     beta_result = tibble(
-        "true beta" = beta,
-        "lr coefficient" = coefficients(lr)[2:length(coefficients(lr))],
-        "step coefficient" = coefficients(step_lr)[2:length(coefficients(step_lr))],
-        "lasso coefficient" = as.vector(coefficients(lasso))[2:length(coefficients(lasso))],
-        "type" = c(rep("strong", as.integer(strong * p)), rep("weak_corr", as.integer(weak_corr * p)), rep("weak", p - as.integer(strong * p) - as.integer(weak_corr * p)))
-        ) %>% 
+        "idx" = j,
+        "true_beta" = beta,
+        "lr" = coefficients(lr)[2:length(coefficients(lr))],
+        "step" = coefficients(step_lr)[2:length(coefficients(step_lr))],
+        "lasso" = as.vector(coefficients(lasso))[2:length(coefficients(lasso))],
+        "type" = c(rep("strong", as.integer(strong * 0.5* p)), rep("weak_corr", as.integer(weak_corr *0.5* p)), rep("weak", 0.5*p - as.integer(strong * 0.5* p) - as.integer(weak_corr *0.5* p)), rep("null", length(null_beta)))
+          ) %>% 
       replace(is.na(.), 0) 
     
     # tidy beta result for later calculation of recall, precision, f1 score
     model_measures = beta_result %>% 
-      select(- `lr coefficient`) %>% 
-      rename(step = `step coefficient`, lasso=`lasso coefficient`) %>% 
+      select(- lr) %>% 
       pivot_longer(step:lasso, names_to  = "method", values_to = "coefficient") %>% 
-      mutate(correct = ifelse((type == "strong"& coefficient != 0) | 
-                                     (type != "strong" & coefficient == 0), 1, 0 )) %>% 
-      mutate(n = sample_size, sigma = sigma)
+      mutate(correct = ifelse((type != "null"& coefficient != 0) | 
+                                     (type == "null" & coefficient == 0), 1, 0 )) %>% 
+      mutate(n = sample_size, sigma = sigma, idx = j) 
     
     beta_list[[j]] = beta_result
     measures[[j]] = model_measures
     fitted[[j]] = fitted_values
+    step_models[[j]] = step_lr
+    lasso_models[[j]] = lasso
   }
   
   
   # collect output
   #result = list(beta = beta_list, data = data, response = response, c = c, percentage = c(strong, weak_corr, weak_no_corr), lr_model = lr, step_model = step_lr, lasso_model = lasso, cov_matrix = sigma_matrix * sigma)
-  result = list(beta = beta_list, measures = measures, fitted = fitted, c = c, percentage = c(strong, weak_corr, weak_no_corr), cov_matrix = sigma_matrix * sigma)
+  result = list(beta = beta_list, measures = measures, fitted = fitted, c = c, percentage = c(strong, weak_corr, weak_no_corr), cov_matrix = sigma_matrix * sigma, step_models = step_models, lasso_models = lasso_models)
   return(result)
 }
 
@@ -312,35 +319,35 @@ Save simulation results
 # factor to be investigated: n, correlation, error 
 
 
-# store row beta results in a list
+# store all row results (including models, betas, predicted value etc.) in a list
 row_results <- list()
 for (sample_size in c(200, 1000, 5000)) {
   for (sigma in c(0.3, 0.8)) {
     temp_results <- simulation(time = 100, n = sample_size, p = 200, percentage = c(5, 3, 2), 
-                           sigma = sigma)$measures
+                           sigma = sigma)
     row_results <- append(row_results, temp_results)
   }
 }
 # saveRDS(row_results, file = "beta_estimates.rds")
-  
+
 ```
 
 Get measurement scores
 ```{r}
 get_measures <- function(beta_df){
     # recall, precision, F1
-    recall = beta_df %>% filter(type == "strong") %>% group_by(method, n, sigma) %>% summarize(recall = mean(correct))
-    precision = beta_df %>% filter(correct == 1) %>% mutate(strong = type == "strong") %>% group_by(method, n, sigma) %>% summarize(precision = mean(strong))
+    recall = beta_df %>% filter(type != "null") %>% group_by(method, type,n, sigma) %>% summarize(recall = mean(correct))
+    precision = beta_df %>% filter(correct == 1) %>% mutate(not_null = ifelse(type == "null",0,1)) %>% group_by(method, type,n, sigma) %>% summarize(precision = mean(not_null))
     
     # output a tibble
-    return(left_join(recall, precision, by = c("method", "n", "sigma")) %>% mutate(f1 = 2/(1/recall + 1/precision)))
+    return(left_join(recall, precision, by = c("method","type", "n", "sigma")) %>% 
+             mutate(f1 = 2/(1/recall + 1/precision)))
 }
 
 measures_result = get_measures(row_results[[1]])
 for(i in 2:length(row_results)){
-  measures_result = rbind(measures_result, get_measures(row_results[[i]]))
+  measures_result = rbind(measures_result, get_measures(row_results[[i]])) %>% mutate(idx = i)
 }
-measures_result$idx = idx
 # saveRDS(measures_result, file = "measurement_scores.rds")
 ```
 
