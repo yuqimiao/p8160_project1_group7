@@ -1,0 +1,46 @@
+--------- beta_estimates.rds -----------
+
+List containing 600 datasets, each of them include the following variables:
+
+- `true beta`
+- type
+- method
+- coefficient: estimated beta
+- correct: indicating whether the variable selection is correct or not
+- n: sample size
+- sigma: specified correlation  
+
+For list number...
+#1- #100: sample size = 200, sigma(correlation) = 0.3
+#101 - #200: sample size = 200, sigma(correlation) = 0.8
+#201 - #300: sample size = 1000, sigma(correlation) = 0.3
+#301 - #400: sample size = 1000, sigma(correlation) = 0.8
+#401 - #500: sample size = 5000, sigma(correlation) = 0.3
+#501 - #600: sample size = 5000, sigma(correlation) = 0.8
+
+
+
+------- measurement_scores.rds -----------
+
+1200*7 nibble with the following variables:
+
+- method
+- n 
+- sigma
+- recall
+- precision
+- f1 
+- idx: index of simulation under each setting, ranges from 1 to 100 
+
+
+-------- fitted_values.rds ---------------
+
+List containing 600 datasets, each of them include the following variables:
+
+- true_y
+- step_fitted
+- lasso_fitted
+- n
+- p 
+- correlation (i.e. sigma)
+
