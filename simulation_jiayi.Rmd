@@ -21,7 +21,7 @@ Do not call this function out of simulation function
 
 # this function is to calculate lasso function by cv
 lasso_function = function(data, response){
-  lambda_best = glmnet::cv.glmnet(x = data, y = response, alpha = 1, nfolds = 10) #cv to find best lambda
+  lambda_best = glmnet::cv.glmnet(x = data, y = response, alpha = 1, nfolds = 5) #cv to find best lambda
   lambda = lambda_best$lambda.min #best lambda
   lasso_best_fit = glmnet::glmnet(x = data, y = response, alpha = 1, nlambda = 1, lambda = lambda) #fit the lasso model
   lasso_best_fit
@@ -166,7 +166,7 @@ If type is "definite", each weak_corr variable will be assign to only 1 differen
 
 ```{r}
 # This is the main function of simulation
-simulation <- function(time, n, p, percentage, c = 1, mu = 1, sigma = 0.5, beta = NULL, seed = 100, error_sigma = 1, correlation = 0.5, type = "density", weak_corr_density = 0.5) {
+simulation <- function(time, n, p, percentage, c = 1, mu = 1, sigma = 0.5, beta = NULL, seed = 100, error_sigma = 3, correlation = 0.5, type = "density", weak_corr_density = 0.5) {
   set.seed(seed) 
   
   # check input
@@ -201,6 +201,7 @@ simulation <- function(time, n, p, percentage, c = 1, mu = 1, sigma = 0.5, beta 
   parameters = list(corr_matrix = sigma_matrix, strong = strong, weak_corr = weak_corr, weak_no_corr = weak_no_corr, density = weak_corr_density, corr = correlation)
   
   sigma_matrix = correlation_process(parameters, type)
+  
   #for (i in 1:as.integer(strong * p)) {
   #  sigma_matrix[i][i + as.integer(strong * p)] = 0.5
   #  sigma_matrix[i + as.integer(strong * p)][i] = 0.5
@@ -223,7 +224,7 @@ simulation <- function(time, n, p, percentage, c = 1, mu = 1, sigma = 0.5, beta 
   
   # if beta is not specified, simulate beta by c
   if (length(beta) == 0) {
-    strong_beta = runif(as.integer(strong * 0.5* p), min = c * sqrt(log(p) / n), max = c * sqrt(p / n))
+    strong_beta = runif(as.integer(strong * 0.5* p), min = c * sqrt(log(p) / n), max = 5*c * sqrt(p / n))
     
     weak_corr_beta = runif(as.integer(weak_corr *0.5* p), min = 0, max = c * sqrt(log(p) / n))
     
@@ -247,7 +248,7 @@ simulation <- function(time, n, p, percentage, c = 1, mu = 1, sigma = 0.5, beta 
   
   for (j in 1:time) {
     set.seed(time + j)
-    
+    print(j)
     data = mvrnorm(n = n, mu = rep(mu, p), Sigma = sigma_matrix * sigma, tol = 1)
   
   
@@ -261,25 +262,33 @@ simulation <- function(time, n, p, percentage, c = 1, mu = 1, sigma = 0.5, beta 
     response = data %*% beta + error_term
     # regression
     lr = lm(response ~ data)
-    step_lr = step(lm(response ~ data), direction = "forward")
+    step_lr = step(lm(response ~ 1, data = data.frame(data)), 
+                   scope = formula(lm(response ~ ., data = data.frame(data))), 
+                   direction = "forward")
     lasso = lasso_function(data, response)
     
     # get fitted values
     step_fitted = fitted.values(step_lr)
     lasso_fitted = predict(lasso, data) %>% as.vector()
     fitted_values = tibble(idx = j,
-                            true_y = as.vector(response), 
+                           true_y = as.vector(response), 
                            step_fitted = step_fitted,
-                           lasso_fitted =lasso_fitted,
+                           lasso_fitted = lasso_fitted,
                            n = n, p = p,
                            correlation = sigma)
-  
+    
+    # get coefficient estimates of the stepwise model 
+    coef_step = coefficients(step_lr)[2:length(coefficients(step_lr))]
+    coef_step_full = rep(0, p)
+    names(coef_step_full) = paste0("V", 1:p)
+    coef_step_full[match(names(coef_step), names(coef_step_full))] <- coef_step
+    
     # collect beta as tibble
     beta_result = tibble(
         "idx" = j,
         "true_beta" = beta,
         "lr" = coefficients(lr)[2:length(coefficients(lr))],
-        "step" = coefficients(step_lr)[2:length(coefficients(step_lr))],
+        "step" = coef_step_full,
         "lasso" = as.vector(coefficients(lasso))[2:length(coefficients(lasso))],
         "type" = c(rep("strong", as.integer(strong * 0.5* p)), rep("weak_corr", as.integer(weak_corr *0.5* p)), rep("weak", 0.5*p - as.integer(strong * 0.5* p) - as.integer(weak_corr *0.5* p)), rep("null", length(null_beta)))
           ) %>% 
