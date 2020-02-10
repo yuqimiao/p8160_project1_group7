@@ -179,10 +179,6 @@ simulation <- function(time, n, p, percentage, c = 1, mu = 1, sigma = 0.5, beta 
     
     beta = c(strong_beta, weak_corr_beta, weak_beta, null_beta)
     
-    # randomly make some beta negative 
-    beta_sign = runif(length(beta), -1, 1)
-    beta_sign = beta_sign / abs(beta_sign)
-    beta = beta * beta_sign
   }
   
   # calculate response variable
