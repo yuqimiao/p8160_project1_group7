@@ -1,23 +1,7 @@
----
-title: "Simulation"
-author: "Jungang Zou"
-date: "2/4/2020"
-output: github_document
----
-
-```{r setup, include=FALSE}
 library(MASS)
 library(glmnet)
 library(tidyverse)
-```
 
-
-
-# correlation_process function
-Do not call this function out of simulation function
-
-
-```{r}
 
 # this function is to calculate lasso function by cv
 lasso_function = function(data, response){
@@ -49,9 +33,9 @@ correlation_process = function(parameters, type) {
         }
       }
       if (!changed) {
-         corr_matrix[i, 1] = parameters$corr
-         corr_matrix[1, i] = parameters$corr
-         density_num = density_num - 1
+        corr_matrix[i, 1] = parameters$corr
+        corr_matrix[1, i] = parameters$corr
+        density_num = density_num - 1
       }
     }
     changed_rate = max(density_num / (strong * weak_corr - weak_corr), 0)
@@ -88,8 +72,8 @@ correlation_process = function(parameters, type) {
         }
       }
       if (!changed) {
-         corr_matrix[i, 1] = parameters$corr
-         corr_matrix[1, i] = parameters$corr
+        corr_matrix[i, 1] = parameters$corr
+        corr_matrix[1, i] = parameters$corr
       }
     }
     return(corr_matrix)
@@ -124,47 +108,8 @@ correlation_process = function(parameters, type) {
   }
 }
 
-```
 
 
-
-
-
-# Simulation Function:
-
-input:
-
-* time(required) : #simulation related to same parameters
-* n(required) : #sample
-* p(required) : #feature
-* percentage(required): vector of length 3, percentage of strong, weak_correlated and weak data, must be positive, not need to be sum up to 1
-* c : to calculate the zone of beta, if beta is specified, this parameter has no use
-* mu : the mean of strong and weak_correlated data
-* sigma : the covariance of strong and weak_correlated data
-* beta : true beta. If beta is not specified, beta will be sampled by formulas of c
-* seed : set the random seed.
-* error_sigma : the variance of error term
-* correlation : the correlation between strong variables and weak_corr variables
-* type : the type of correlation, you can specify it in {"unique", "density", "definite"}
-* weak_corr_density : the density of correlation. The number of correlation will be density * #strong * # weak_corr. Randomly select correlation.  If type is not "density", this parameter will be no use.
-
-output:
-
-* beta : a tibble consist of true beta, lr beta, step beta, lasso beta, beta type
-* c : c is specified or calculated
-* percentage: scaled percentage
-* cov_matrix: covariance matrix 
-
-The relationship between c and beta:
-If c is specified and beta is NULL, then the function will calculate different zone for beta, and simulate beta from the calculated zone by percentage.
-If beta is specified, c will be no use. And new c will be calculate in function.
-
-Correlation type:
-If type is "unique", each weak_corr variable will be randomly correlate to only 1 strong variables.
-If type is "density", each weak_corr variable will be randomly correlate to at least 1 strong variables. All the correlation will be sum up to weak_corr_density * #strong * #weak_corr.
-If type is "definite", each weak_corr variable will be assign to only 1 different strong variables. If #strong < #weak_corr, some error will be occurred.
-
-```{r}
 # This is the main function of simulation
 simulation <- function(time, n, p, percentage, c = 1, mu = 1, sigma = 0.5, beta = NULL, seed = 100, error_sigma = 3, correlation = 0.5, type = "density", weak_corr_density = 0.5) {
   set.seed(seed) 
@@ -186,7 +131,7 @@ simulation <- function(time, n, p, percentage, c = 1, mu = 1, sigma = 0.5, beta 
   if (weak_corr_density < 0 || weak_corr_density > 1) {
     stop("weak_corr_density must be in [0, 1]")
   }
-    
+  
   # scale percentage
   strong = percentage[1] / sum(percentage)
   weak_corr = percentage[2] / sum(percentage)
@@ -254,8 +199,8 @@ simulation <- function(time, n, p, percentage, c = 1, mu = 1, sigma = 0.5, beta 
     print(corr_sigma)
     data = mvrnorm(n = n, mu = rep(mu, p), Sigma = sigma_matrix * corr_sigma, tol = 1)
     
-  
-  
+    
+    
     # set the variable names
     data_columns_names = paste("V", 1:p, sep = "")
     colnames(data) <- data_columns_names
@@ -277,8 +222,8 @@ simulation <- function(time, n, p, percentage, c = 1, mu = 1, sigma = 0.5, beta 
     
     lr_new = lm(response ~ data_new)
     step_lr_new = step(lm(response ~ 1, data = data.frame(data_new)), 
-                   scope = formula(lm(response ~ ., data = data.frame(data_new))), 
-                   direction = "forward")
+                       scope = formula(lm(response ~ ., data = data.frame(data_new))), 
+                       direction = "forward")
     lasso_new = lasso_function(data_new, response)
     
     
@@ -296,11 +241,11 @@ simulation <- function(time, n, p, percentage, c = 1, mu = 1, sigma = 0.5, beta 
     step_fitted_new = fitted.values(step_lr_new)
     lasso_fitted_new = predict(lasso_new, data_new) %>% as.vector()
     fitted_values_new = tibble(idx = j,
-                           true_y = as.vector(response), 
-                           step_fitted = step_fitted_new,
-                           lasso_fitted = lasso_fitted_new,
-                           n = n, p = p,
-                           correlation = corr_sigma)
+                               true_y = as.vector(response), 
+                               step_fitted = step_fitted_new,
+                               lasso_fitted = lasso_fitted_new,
+                               n = n, p = p,
+                               correlation = corr_sigma)
     
     # get coefficient estimates of the stepwise model 
     coef_step = coefficients(step_lr)[2:length(coefficients(step_lr))]
@@ -315,24 +260,25 @@ simulation <- function(time, n, p, percentage, c = 1, mu = 1, sigma = 0.5, beta 
     
     # collect beta as tibble
     beta_result = tibble(
-        "idx" = j,
-        "true_beta" = beta,
-        "lr" = coefficients(lr)[2:length(coefficients(lr))],
-        "step" = coef_step_full,
-        "lasso" = as.vector(coefficients(lasso))[2:length(coefficients(lasso))],
-        "type" = c(rep("strong", as.integer(strong * 0.5* p)), rep("weak_corr", as.integer(weak_corr *0.5* p)), rep("weak", 0.5*p - as.integer(strong * 0.5* p) - as.integer(weak_corr *0.5* p)), rep("null", length(null_beta)))
-          ) %>% 
+      "idx" = j,
+      "true_beta" = beta,
+      "lr" = coefficients(lr)[2:length(coefficients(lr))],
+      "step" = coef_step_full,
+      "lasso" = as.vector(coefficients(lasso))[2:length(coefficients(lasso))],
+      "type" = c(rep("strong", as.integer(strong * 0.5* p)), rep("weak_corr", as.integer(weak_corr *0.5* p)), rep("weak", 0.5*p - as.integer(strong * 0.5* p) - as.integer(weak_corr *0.5* p)), rep("null", length(null_beta)))
+    ) %>% 
       replace(is.na(.), 0) 
     
     
     beta_result_new = tibble(
-        "idx" = j,
-        "true_beta" = beta[-((length(strong_beta) + 1):(length(strong_beta) + length(weak_corr_beta) + length(weak_beta)))],
-        "lr" = coefficients(lr_new)[2:length(coefficients(lr_new))],
-        "step" = coef_step_full_new[-((length(strong_beta) + 1):(length(strong_beta) + length(weak_corr_beta) + length(weak_beta)))],
-        "lasso" = as.vector(coefficients(lasso_new))[2:length(coefficients(lasso_new))],
-        "type" = c(rep("strong", as.integer(strong * 0.5* p)), rep("null", length(null_beta)))
-          ) %>% 
+      "idx" = j,
+      "beta_idx"= c(1:50, 101:200),
+      "true_beta" = beta[-((length(strong_beta) + 1):(length(strong_beta) + length(weak_corr_beta) + length(weak_beta)))],
+      "lr" = coefficients(lr_new)[2:length(coefficients(lr_new))],
+      "step" = coef_step_full_new[-((length(strong_beta) + 1):(length(strong_beta) + length(weak_corr_beta) + length(weak_beta)))],
+      "lasso" = as.vector(coefficients(lasso_new))[2:length(coefficients(lasso_new))],
+      "type" = c(rep("strong", as.integer(strong * 0.5* p)), rep("null", length(null_beta)))
+    ) %>% 
       replace(is.na(.), 0) 
     
     # tidy beta result for later calculation of recall, precision, f1 score
@@ -340,14 +286,14 @@ simulation <- function(time, n, p, percentage, c = 1, mu = 1, sigma = 0.5, beta 
       dplyr::select(- lr) %>% 
       pivot_longer(step:lasso, names_to  = "method", values_to = "coefficient") %>% 
       mutate(correct = ifelse((type != "null"& coefficient != 0) | 
-                                     (type == "null" & coefficient == 0), 1, 0 )) %>% 
+                                (type == "null" & coefficient == 0), 1, 0 )) %>% 
       mutate(n = n, sigma = sigma, idx = j) 
     
     model_measures_new = beta_result_new %>% 
       dplyr::select(-lr) %>% 
       pivot_longer(step:lasso, names_to  = "method", values_to = "coefficient") %>% 
       mutate(correct = ifelse((type != "null"& coefficient != 0) | 
-                                     (type == "null" & coefficient == 0), 1, 0 )) %>% 
+                                (type == "null" & coefficient == 0), 1, 0 )) %>% 
       mutate(n = n, sigma = sigma, idx = j) 
     
     beta_list[[j]] = beta_result
@@ -365,70 +311,3 @@ simulation <- function(time, n, p, percentage, c = 1, mu = 1, sigma = 0.5, beta 
   result = list(beta = beta_list, measures = measures, fitted = fitted, beta_new = beta_list_new, measures_new = measures_new, fitted_new = fitted_new, c = c, percentage = c(strong, weak_corr, weak_no_corr), cov_matrix = sigma_matrix * sigma)
   return(result)
 }
-
-```
-
-
-Save simulation results and fitted values
-```{r}
-# default setting: 
-# strong:weak_corr:weak = 5:3:2
-# p = 200
-# factor to be investigated: n, correlation, error 
-
-
-# store beta estimates in a list
-beta_results <- list()
-fitted_results <- list()
-for (sample_size in c(200, 1000, 5000)) {
-    temp_results <- simulation(time = 100, n = sample_size, p = 200, percentage = c(5, 3, 2), 
-                           sigma = sigma, type = "definite")
-    beta_results <- append(beta_results, temp_results$measures)
-    fitted_results <- append(fitted_results, temp_results$fitted)
-}
-# saveRDS(beta_results, file = "beta_estimates.rds")
-# beta_results <- readRDS( "beta_estimates.rds")
-# saveRDS(fitted_results, file = "fitted_values.rds")
-
-```
-
-Set no correlated weak predictors
-```{r}
-beta_results <- list()
-fitted_results <- list()
-for (sample_size in c(200, 1000, 5000)) {
-    temp_results <- simulation(time = 100, n = sample_size, p = 200, percentage = c(5, 1, 4), 
-                           sigma = 0.8, error_sigma = 1)
-    beta_results <- append(beta_results, temp_results$measures)
-    fitted_results <- append(fitted_results, temp_results$fitted)
-}
-# saveRDS(beta_results, file = "./data/no_corr_weak/beta_estimates_v2.rds")
-# beta_results <- readRDS( "beta_estimates.rds")
-# saveRDS(fitted_results, file = "./data/no_corr_weak/fitted_values_v2.rds")
-```
-
-
-
-Get measurement scores
-```{r}
-get_measures <- function(beta_df){
-    # recall, precision, F1
-    recall = beta_df %>% filter(type != "null") %>% group_by(method,n, sigma) %>% summarize(recall = mean(correct))
-    precision = beta_df %>% filter(coefficient != 0) %>% mutate(not_null = ifelse(type == "null",0,1)) %>% group_by(method,n, sigma) %>% summarize(precision = mean(not_null))
-    specificity = beta_df %>% filter(type == "null") %>% group_by(method,n, sigma) %>% summarize(specificity = mean(correct))
-    # output a tibble
-    return(left_join(recall, precision, by = c("method", "n", "sigma")) %>% 
-             left_join(specificity, by = c("method", "n", "sigma")) %>% 
-             mutate(f1 = 2/(1/recall + 1/precision))) 
-}
-
-measures_result = get_measures(beta_results[[1]])
-for(i in 2:length(beta_results)){
-  measures_result = rbind(measures_result, get_measures(beta_results[[i]]))
-}
-measures_result$idx = rep( rep(seq_len(100), each=2), 6)
-# saveRDS(measures_result, file = "./data/large_error/measurement_scores_v2.rds")
-```
-
-
-
