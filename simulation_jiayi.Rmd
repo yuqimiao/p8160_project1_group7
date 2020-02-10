@@ -328,18 +328,33 @@ Save simulation results and fitted values
 beta_results <- list()
 fitted_results <- list()
 for (sample_size in c(200, 1000, 5000)) {
-  for (sigma in c(0.3, 0.8)) {
     temp_results <- simulation(time = 100, n = sample_size, p = 200, percentage = c(5, 3, 2), 
-                           sigma = sigma)
+                           sigma = sigma, type = "definite")
     beta_results <- append(beta_results, temp_results$measures)
     fitted_results <- append(fitted_results, temp_results$fitted)
-  }
 }
 # saveRDS(beta_results, file = "beta_estimates.rds")
 # beta_results <- readRDS( "beta_estimates.rds")
 # saveRDS(fitted_results, file = "fitted_values.rds")
 
 ```
+
+Set no correlated weak predictors
+```{r}
+beta_results <- list()
+fitted_results <- list()
+for (sample_size in c(200, 1000, 5000)) {
+    temp_results <- simulation(time = 100, n = sample_size, p = 200, percentage = c(5, 1, 4), 
+                           sigma = 0.8, error_sigma = 1)
+    beta_results <- append(beta_results, temp_results$measures)
+    fitted_results <- append(fitted_results, temp_results$fitted)
+}
+# saveRDS(beta_results, file = "./data/no_corr_weak/beta_estimates_v2.rds")
+# beta_results <- readRDS( "beta_estimates.rds")
+# saveRDS(fitted_results, file = "./data/no_corr_weak/fitted_values_v2.rds")
+```
+
+
 
 Get measurement scores
 ```{r}
@@ -362,20 +377,5 @@ measures_result$idx = rep( rep(seq_len(100), each=2), 6)
 # saveRDS(measures_result, file = "./data/large_error/measurement_scores_v2.rds")
 ```
 
-
-Set no correlated weak predictors
-```{r}
-beta_results <- list()
-fitted_results <- list()
-for (sample_size in c(200, 1000, 5000)) {
-    temp_results <- simulation(time = 100, n = sample_size, p = 200, percentage = c(5, 1, 4), 
-                           sigma = 0.8, error_sigma = 1)
-    beta_results <- append(beta_results, temp_results$measures)
-    fitted_results <- append(fitted_results, temp_results$fitted)
-}
-# saveRDS(beta_results, file = "./data/no_corr_weak/beta_estimates_v2.rds")
-# beta_results <- readRDS( "beta_estimates.rds")
-# saveRDS(fitted_results, file = "./data/no_corr_weak/fitted_values_v2.rds")
-```
 
 
