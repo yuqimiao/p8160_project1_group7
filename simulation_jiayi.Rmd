@@ -360,7 +360,7 @@ for(i in 2:length(beta_results)){
   measures_result = rbind(measures_result, get_measures(beta_results[[i]]))
 }
 measures_result$idx = rep( rep(seq_len(100), each=2), 6)
-# saveRDS(measures_result, file = "./data/large_error/measurement_scores.rds")
+# saveRDS(measures_result, file = "./data/large_error/measurement_scores_v2.rds")
 ```
 
 
@@ -376,9 +376,9 @@ for (sample_size in c(200, 1000, 5000)) {
     fitted_results <- append(fitted_results, temp_results$fitted)
   }
 }
-saveRDS(beta_results, file = "./data/no_corr_weak/beta_estimates.rds")
+# saveRDS(beta_results, file = "./data/no_corr_weak/beta_estimates_v2.rds")
 # beta_results <- readRDS( "beta_estimates.rds")
-saveRDS(fitted_results, file = "./data/no_corr_weak/fitted_values.rds")
+# saveRDS(fitted_results, file = "./data/no_corr_weak/fitted_values_v2.rds")
 ```
 
 
