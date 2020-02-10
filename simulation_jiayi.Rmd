@@ -237,7 +237,6 @@ simulation <- function(time, n, p, percentage, c = 1, mu = 1, sigma = 0.5, beta 
     # randomly make some beta negative 
     beta_sign = runif(length(beta), -1, 1)
     beta_sign = beta_sign / abs(beta_sign)
-    beta = beta * beta_sign
   }
   
   # calculate response variable
@@ -369,12 +368,10 @@ Set no correlated weak predictors
 beta_results <- list()
 fitted_results <- list()
 for (sample_size in c(200, 1000, 5000)) {
-  for (sigma in c(0.3, 0.8)) {
     temp_results <- simulation(time = 100, n = sample_size, p = 200, percentage = c(5, 1, 4), 
-                           sigma = sigma, error_sigma = 1)
+                           sigma = 0.8, error_sigma = 1)
     beta_results <- append(beta_results, temp_results$measures)
     fitted_results <- append(fitted_results, temp_results$fitted)
-  }
 }
 # saveRDS(beta_results, file = "./data/no_corr_weak/beta_estimates_v2.rds")
 # beta_results <- readRDS( "beta_estimates.rds")
