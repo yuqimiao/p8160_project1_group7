@@ -57,6 +57,10 @@ Definition of weak but correlated predictors:
 Definition of weak and independent predictors:
 
 $$S_3 = \left\{j:0<|\beta_j|\leq c\sqrt{\log(p)/n},some\ c>0,corr(X_i,X_{j'})=0,all\ j'\in S_1,1\leq j\leq p\right\}$$
+Definition of noise:\
+$$S_4 = \left\{j:|\beta_j| = 0,1\leq j\leq p\right\}$$
+
+
 
 ## 4.3 Parameter correlation
 
