@@ -1,6 +1,8 @@
 ---
 title: "p8160-project1"
-output: word_document
+output: 
+  pdf_document:
+    latex_engine: xelatex
 ---
 
 # 1 Objectives 
@@ -54,7 +56,7 @@ Definition of weak but correlated predictors:
   $$S_2 = \left\{j:0<|\beta_j|\leq c\sqrt{\log(p)/n},some\ c>0,corr(X_i,X_{j'})\neq0,some\ j'\in S_1,1\leq j\leq p\right\}$$
 Definition of weak and independent predictors:
 
-$$S_2 = \left\{j:0<|\beta_j|\leq c\sqrt{\log(p)/n},some\ c>0,corr(X_i,X_{j'})=0,all\ j'\in S_1,1\leq j\leq p\right\}$$
+$$S_3 = \left\{j:0<|\beta_j|\leq c\sqrt{\log(p)/n},some\ c>0,corr(X_i,X_{j'})=0,all\ j'\in S_1,1\leq j\leq p\right\}$$
 
 ## 4.3 Parameter correlation
 
