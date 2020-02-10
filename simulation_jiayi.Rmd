@@ -169,6 +169,7 @@ If type is "definite", each weak_corr variable will be assign to only 1 differen
 simulation <- function(time, n, p, percentage, c = 1, mu = 1, sigma = 0.5, beta = NULL, seed = 100, error_sigma = 3, correlation = 0.5, type = "density", weak_corr_density = 0.5) {
   set.seed(seed) 
   
+  corr_sigma = sigma
   # check input
   if (length(percentage) != 3) {
     stop("please send the 3 samples percentage")
@@ -230,7 +231,7 @@ simulation <- function(time, n, p, percentage, c = 1, mu = 1, sigma = 0.5, beta 
     
     weak_beta = runif(0.5*p - as.integer(strong * 0.5*p) - as.integer(weak_corr * 0.5* p), min = 0, max = c * sqrt(log(p) / n))
     
-    null_beta = rep(0, p - length(strong_beta)- length(weak_corr_beta) - length(weak_beta))
+    null_beta = rep(0, p - length(strong_beta) - length(weak_corr_beta) - length(weak_beta))
     
     beta = c(strong_beta, weak_corr_beta, weak_beta, null_beta)
     
@@ -243,12 +244,15 @@ simulation <- function(time, n, p, percentage, c = 1, mu = 1, sigma = 0.5, beta 
   beta_list = list()
   measures = list()
   fitted = list()
-
+  beta_list_new = list()
+  measures_new = list()
+  fitted_new = list()
   
   for (j in 1:time) {
     set.seed(time + j)
-    print(j)
-    data = mvrnorm(n = n, mu = rep(mu, p), Sigma = sigma_matrix * sigma, tol = 1)
+    print(sigma_matrix)
+    print(corr_sigma)
+    data = mvrnorm(n = n, mu = rep(mu, p), Sigma = sigma_matrix * corr_sigma, tol = 1)
     
   
   
@@ -257,8 +261,11 @@ simulation <- function(time, n, p, percentage, c = 1, mu = 1, sigma = 0.5, beta 
     colnames(data) <- data_columns_names
     
     
+    data_new <- data[, -((length(strong_beta) + 1):(length(strong_beta) + length(weak_corr_beta) + length(weak_beta)))]
+    
     error_term = rnorm(n, mean = 0, sd = error_sigma)
     response = data %*% beta + error_term
+    
     
     
     # regression
@@ -268,6 +275,13 @@ simulation <- function(time, n, p, percentage, c = 1, mu = 1, sigma = 0.5, beta 
                    direction = "forward")
     lasso = lasso_function(data, response)
     
+    lr_new = lm(response ~ data_new)
+    step_lr_new = step(lm(response ~ 1, data = data.frame(data_new)), 
+                   scope = formula(lm(response ~ ., data = data.frame(data_new))), 
+                   direction = "forward")
+    lasso_new = lasso_function(data_new, response)
+    
+    
     # get fitted values
     step_fitted = fitted.values(step_lr)
     lasso_fitted = predict(lasso, data) %>% as.vector()
@@ -276,13 +290,28 @@ simulation <- function(time, n, p, percentage, c = 1, mu = 1, sigma = 0.5, beta 
                            step_fitted = step_fitted,
                            lasso_fitted = lasso_fitted,
                            n = n, p = p,
-                           correlation = sigma)
+                           correlation = corr_sigma)
+    
+    
+    step_fitted_new = fitted.values(step_lr_new)
+    lasso_fitted_new = predict(lasso_new, data_new) %>% as.vector()
+    fitted_values_new = tibble(idx = j,
+                           true_y = as.vector(response), 
+                           step_fitted = step_fitted_new,
+                           lasso_fitted = lasso_fitted_new,
+                           n = n, p = p,
+                           correlation = corr_sigma)
     
     # get coefficient estimates of the stepwise model 
     coef_step = coefficients(step_lr)[2:length(coefficients(step_lr))]
     coef_step_full = rep(0, p)
     names(coef_step_full) = paste0("V", 1:p)
     coef_step_full[match(names(coef_step), names(coef_step_full))] <- coef_step
+    
+    coef_step_new = coefficients(step_lr_new)[2:length(coefficients(step_lr_new))]
+    coef_step_full_new = rep(0, p)
+    names(coef_step_full_new) = paste0("V", 1:p)
+    coef_step_full_new[match(names(coef_step_new), names(coef_step_full_new))] <- coef_step_new
     
     # collect beta as tibble
     beta_result = tibble(
@@ -295,6 +324,17 @@ simulation <- function(time, n, p, percentage, c = 1, mu = 1, sigma = 0.5, beta 
           ) %>% 
       replace(is.na(.), 0) 
     
+    
+    beta_result_new = tibble(
+        "idx" = j,
+        "true_beta" = beta[-((length(strong_beta) + 1):(length(strong_beta) + length(weak_corr_beta) + length(weak_beta)))],
+        "lr" = coefficients(lr_new)[2:length(coefficients(lr_new))],
+        "step" = coef_step_full_new[-((length(strong_beta) + 1):(length(strong_beta) + length(weak_corr_beta) + length(weak_beta)))],
+        "lasso" = as.vector(coefficients(lasso_new))[2:length(coefficients(lasso_new))],
+        "type" = c(rep("strong", as.integer(strong * 0.5* p)), rep("null", length(null_beta)))
+          ) %>% 
+      replace(is.na(.), 0) 
+    
     # tidy beta result for later calculation of recall, precision, f1 score
     model_measures = beta_result %>% 
       dplyr::select(- lr) %>% 
@@ -303,15 +343,26 @@ simulation <- function(time, n, p, percentage, c = 1, mu = 1, sigma = 0.5, beta 
                                      (type == "null" & coefficient == 0), 1, 0 )) %>% 
       mutate(n = n, sigma = sigma, idx = j) 
     
+    model_measures_new = beta_result_new %>% 
+      dplyr::select(-lr) %>% 
+      pivot_longer(step:lasso, names_to  = "method", values_to = "coefficient") %>% 
+      mutate(correct = ifelse((type != "null"& coefficient != 0) | 
+                                     (type == "null" & coefficient == 0), 1, 0 )) %>% 
+      mutate(n = n, sigma = sigma, idx = j) 
+    
     beta_list[[j]] = beta_result
     measures[[j]] = model_measures
     fitted[[j]] = fitted_values
+    
+    beta_list_new[[j]] = beta_result_new
+    measures_new[[j]] = model_measures_new
+    fitted_new[[j]] = fitted_values_new
   }
   
   
   # collect output
   #result = list(beta = beta_list, data = data, response = response, c = c, percentage = c(strong, weak_corr, weak_no_corr), lr_model = lr, step_model = step_lr, lasso_model = lasso, cov_matrix = sigma_matrix * sigma)
-  result = list(beta = beta_list, measures = measures, fitted = fitted, c = c, percentage = c(strong, weak_corr, weak_no_corr), cov_matrix = sigma_matrix * sigma)
+  result = list(beta = beta_list, measures = measures, fitted = fitted, beta_new = beta_list_new, measures_new = measures_new, fitted_new = fitted_new, c = c, percentage = c(strong, weak_corr, weak_no_corr), cov_matrix = sigma_matrix * sigma)
   return(result)
 }
 
