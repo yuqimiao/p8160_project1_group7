@@ -249,7 +249,7 @@ simulation <- function(time, n, p, percentage, c = 1, mu = 1, sigma = 0.5, beta 
     set.seed(time + j)
     print(j)
     data = mvrnorm(n = n, mu = rep(mu, p), Sigma = sigma_matrix * sigma, tol = 1)
-  
+    
   
   
     # set the variable names
@@ -259,6 +259,8 @@ simulation <- function(time, n, p, percentage, c = 1, mu = 1, sigma = 0.5, beta 
     
     error_term = rnorm(n, mean = 0, sd = error_sigma)
     response = data %*% beta + error_term
+    
+    
     # regression
     lr = lm(response ~ data)
     step_lr = step(lm(response ~ 1, data = data.frame(data)), 
