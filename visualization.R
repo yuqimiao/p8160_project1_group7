@@ -3,9 +3,10 @@
 library(tidyverse)
 
 # read in saved simualtion results
-beta_results = readRDS(file = "beta_estimates.rds")
-fitted_results = readRDS(file = "fitted_values.rds")
-measures_result =  readRDS(file = "measurement_scores.rds")
+folder = "./data/no_corr_weak/"
+beta_results = readRDS(paste0(folder, "beta_estimates.rds"))
+fitted_results = readRDS(paste0(folder, "fitted_values.rds"))
+measures_result =  readRDS(paste0(folder, "measurement_scores.rds"))
 
 
 # Extract results of simulation setting 1:
@@ -44,6 +45,8 @@ beta_df_n200_cor03 %>%
   ggplot(aes(x = method, y = bias)) +
     geom_boxplot()
 
+# combine all the results of beta estiamte
+beta_df =  bind_rows(beta_results)
 
 # add simulation index 1-100 to fitted_results
 for (i in 1:length(fitted_results)) {
@@ -64,7 +67,7 @@ y_df_n200_cor03 %>%
     geom_boxplot()
 
 y_df <-
-  bind_rows(fitted_results) %>% 
+  bind_rows(fitted_results) %>%  
   gather(key = "method", value = "y_pred", step_fitted:lasso_fitted) %>% 
   mutate(loss_l2 = (y_pred - true_y)^2,
          n = as.factor(n)) %>% 
@@ -79,5 +82,28 @@ y_df %>%
   
   
 
-# 
-  
+# examine sens, spec, etc
+measures_df = 
+  get_measures(beta_df)  %>% 
+  ungroup() %>% 
+  mutate(n = as.factor(n))
+
+measures_df %>%  
+  ggplot(aes(x = method,  y = recall, color = n)) +
+    geom_boxplot() +
+    facet_grid(~sigma)
+
+measures_df %>%  
+  ggplot(aes(x = method,  y = specificity, color = n)) +
+  geom_boxplot() +
+  facet_grid(~sigma)
+
+measures_df %>%  
+  ggplot(aes(x = method,  y = precision, color = n)) +
+  geom_boxplot() +
+  facet_grid(~sigma)
+
+measures_df %>%  
+  ggplot(aes(x = method,  y = f1, color = n)) +
+  geom_boxplot() +
+  facet_grid(~sigma)
