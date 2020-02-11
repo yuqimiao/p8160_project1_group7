@@ -1,0 +1,282 @@
+---
+title: "Simulation Results"
+author: "Jack Yan"
+date: "2/11/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+``` 
+
+# strong:weak_corr:weak = 5:1:4
+```{r}
+result_less_weak_corr_n200 = readRDS("./R_script/result_less_weak_corr_n200.rds")
+result_less_weak_corr_n1000 = readRDS("./R_script/result_less_weak_corr_n1000.rds")
+result_less_weak_corr_n5000 = readRDS("./R_script/result_less_weak_corr_n5000.rds")
+
+result_less_weak_corr_n200$percentage
+
+beta_less_weak_corr_n200 = result_less_weak_corr_n200$measures
+beta_less_weak_corr_n1000 = result_less_weak_corr_n1000$measures
+beta_less_weak_corr_n5000 = result_less_weak_corr_n5000$measures
+
+beta_less_weak_corr_df <-
+  bind_rows(beta_less_weak_corr_n200, 
+            beta_less_weak_corr_n1000,
+            beta_less_weak_corr_n5000) %>% 
+  rename(idx_sim = idx) %>% 
+  mutate(true_beta = (true_beta),
+         coefficient = (coefficient),
+         n = as.factor(n)) %>% 
+  mutate(bias2 = (coefficient - true_beta)^2,
+         bias = coefficient - true_beta)
+beta_less_weak_corr_df$idx_beta = rep(1:100, each = 2)
+beta_less_weak_corr_df = beta_less_weak_corr_df %>% 
+  select(idx_sim, idx_beta, everything())
+
+names(beta_less_weak_corr_df)
+unique(beta_less_weak_corr_df$idx_sim)
+unique(beta_less_weak_corr_df$true_beta) %>% sort()
+unique(beta_less_weak_corr_df$type) 
+
+## plots of beta estimates
+beta_less_weak_corr_df %>% 
+  filter(n == 200) %>% 
+  group_by(idx_sim, method, type, n) %>% 
+  summarise(beta_rmse = sqrt(mean(bias2)),
+            beta_bias_mean = mean(bias)) %>% 
+  ggplot(aes(x = method, y = beta_rmse, color = type)) +
+    geom_boxplot() +
+    facet_grid(~n)
+
+beta_less_weak_corr_df %>% 
+  filter(n != 200) %>% 
+  group_by(idx_sim, method, type, n) %>% 
+  summarise(beta_rmse = sqrt(mean(bias2)),
+            beta_bias_mean = mean(bias)) %>% 
+  ggplot(aes(x = method, y = beta_rmse, color = type)) +
+    geom_boxplot() +
+    facet_grid(~n)
+
+beta_less_weak_corr_df %>% 
+  ggplot(aes(x = method, y = bias, color = type)) +
+    geom_boxplot()
+
+
+confusion_matrix_df = 
+  beta_less_weak_corr_df %>% 
+  mutate(selected = if_else(coefficient==0, 0, 1),
+         is_nonzero = if_else(type == "null", 0, 1),
+         is_TP = if_else(type!="null"&coefficient!=0, 1, 0),
+         is_TN = if_else(type=="null"&coefficient==0, 1, 0)
+         ) %>% 
+  group_by(idx_sim, method, n) %>% 
+  summarize(n_selected = sum(selected),
+            n_features = n(),
+            n_nonzero = sum(is_nonzero),
+            n_correct = sum(correct),
+            n_TP = sum(is_TP),
+            n_TN = sum(is_TN)) %>% 
+  mutate(sensitivity = n_TP/n_nonzero,
+         specificity = n_TN/(n_features-n_nonzero),
+         accuracy = n_correct/n_features,
+         precision = n_TP/n_selected,
+         F1_score = 2/(1/precision + 1/sensitivity))
+  
+confusion_matrix_df %>% 
+  ggplot(aes(x = method, y = sensitivity, color = n)) +
+    geom_boxplot()
+
+confusion_matrix_df %>% 
+  ggplot(aes(x = method, y = specificity, color = n)) +
+    geom_boxplot()
+
+confusion_matrix_df %>% 
+  ggplot(aes(x = method, y = accuracy, color = n)) +
+    geom_boxplot()
+
+confusion_matrix_df %>% 
+  ggplot(aes(x = method, y = F1_score, color = n)) +
+    geom_boxplot()
+```
+
+# strong : weak_corr : weak = 5:3:2
+```{r}
+
+result_more_weak_corr_n200 = readRDS("./R_script/result_more_weak_corr_n200.rds")
+result_more_weak_corr_n1000 = readRDS("./R_script/result_more_weak_corr_n1000.rds")
+result_more_weak_corr_n5000 = readRDS("./R_script/result_more_weak_corr_n5000.rds")
+
+result_more_weak_corr_n200$percentage
+
+beta_more_weak_corr_n200 = result_more_weak_corr_n200$measures
+beta_more_weak_corr_n1000 = result_more_weak_corr_n1000$measures
+beta_more_weak_corr_n5000 = result_more_weak_corr_n5000$measures
+
+beta_more_weak_corr_df <-
+  bind_rows(beta_more_weak_corr_n200, 
+            beta_more_weak_corr_n1000,
+            beta_more_weak_corr_n5000) %>% 
+  rename(idx_sim = idx) %>% 
+  mutate(true_beta = abs(true_beta),
+         coefficient = abs(coefficient),
+         n = as.factor(n)) %>% 
+  mutate(bias2 = (coefficient - true_beta)^2,
+         bias = coefficient - true_beta)
+beta_more_weak_corr_df$idx_beta = rep(1:100, each = 2)
+beta_more_weak_corr_df = beta_more_weak_corr_df %>% 
+  select(idx_sim, idx_beta, everything())
+
+names(beta_more_weak_corr_df)
+unique(beta_more_weak_corr_df$idx_sim)
+unique(beta_more_weak_corr_df$true_beta) %>% sort()
+unique(beta_more_weak_corr_df$type) 
+# table(beta_more_weak_corr_df$type, beta_more_weak_corr_df$method)
+
+## plots of beta estimates
+beta_more_weak_corr_df %>% 
+  filter(n == 200) %>% 
+  group_by(idx_sim, method, type, n) %>% 
+  summarise(beta_rmse = sqrt(mean(bias2)),
+            beta_bias_mean = mean(bias)) %>% 
+  ggplot(aes(x = method, y = beta_bias_mean, color = type)) +
+    geom_boxplot() +
+    facet_grid(~n)
+
+beta_more_weak_corr_df %>% 
+  filter(n != 200) %>% 
+  group_by(idx_sim, method, type, n) %>% 
+  summarise(beta_rmse = sqrt(mean(bias2)),
+            beta_bias_mean = mean(bias)) %>% 
+  ggplot(aes(x = method, y = beta_bias_mean, color = type)) +
+    geom_boxplot() +
+    facet_grid(~n)
+
+beta_more_weak_corr_df %>% 
+  filter(n != 200) %>% 
+  group_by(idx_sim, method, type, n) %>% 
+  summarise(beta_rmse = sqrt(mean(bias2)),
+            beta_bias_mean = mean(bias)) %>% 
+  ggplot(aes(x = method, y = beta_rmse)) +
+    geom_boxplot() +
+    facet_grid(~n)
+
+
+
+confusion_matrix_df2 = 
+  beta_more_weak_corr_df %>% 
+  mutate(selected = if_else(coefficient==0, 0, 1),
+         is_nonzero = if_else(type == "null", 0, 1),
+         is_TP = if_else(type!="null"&coefficient!=0, 1, 0),
+         is_TN = if_else(type=="null"&coefficient==0, 1, 0)
+         ) %>% 
+  group_by(idx_sim, method, n) %>% 
+  summarize(n_selected = sum(selected),
+            n_features = n(),
+            n_nonzero = sum(is_nonzero),
+            n_correct = sum(correct),
+            n_TP = sum(is_TP),
+            n_TN = sum(is_TN)) %>% 
+  mutate(sensitivity = n_TP/n_nonzero,
+         specificity = n_TN/(n_features-n_nonzero),
+         accuracy = n_correct/n_features,
+         precision = n_TP/n_selected,
+         F1_score = 2/(1/precision + 1/sensitivity))
+  
+confusion_matrix_df2 %>% 
+  ggplot(aes(x = method, y = sensitivity, color = n)) +
+    geom_boxplot()
+
+confusion_matrix_df2 %>% 
+  ggplot(aes(x = method, y = specificity, color = n)) +
+    geom_boxplot()
+
+confusion_matrix_df2 %>% 
+  ggplot(aes(x = method, y = accuracy, color = n)) +
+    geom_boxplot()
+
+confusion_matrix_df2 %>% 
+  ggplot(aes(x = method, y = F1_score, color = n)) +
+    geom_boxplot()
+
+```
+
+
+
+
+# strong:weak_corr:weak = 5:3:2, compare missing and non-missing weak predictors
+```{r}
+
+result_missing_weak_n200 = readRDS("./R_script/result_missing_weak_n200.rds")
+result_missing_weak_n1000 = readRDS("./R_script/result_missing_weak_n1000.rds")
+# result_more_weak_corr_n5000 = readRDS("./R_script/result_more_weak_corr_n5000.rds")
+
+result_missing_weak_n200$percentage
+
+beta_missing_weak_n200 = result_missing_weak_n200$measures
+beta_missing_weak_n1000 = result_missing_weak_n1000$measures 
+
+beta_missing_weak_n200_new = result_missing_weak_n200$measures_new
+beta_missing_weak_n1000_new = result_missing_weak_n1000$measures_new
+
+beta_missing_weak <-
+  bind_rows(beta_missing_weak_n200, 
+            beta_missing_weak_n1000) %>% 
+  filter(type %in% c("strong", "null")) %>% 
+  rename(idx_sim = idx) %>% 
+  mutate(n = as.factor(n))  
+  # mutate(bias2 = (coefficient - true_beta)^2,
+  #        bias = coefficient - true_beta)
+
+beta_missing_weak_new <-
+  bind_rows(beta_missing_weak_n200_new, 
+            beta_missing_weak_n1000_new) %>% 
+  rename(idx_sim = idx) %>% 
+  mutate(n = as.factor(n)) %>% 
+  # mutate(bias2 = (coefficient - true_beta)^2,
+  #        bias = coefficient - true_beta) %>% 
+  rename(coefficient_new = coefficient)
+
+beta_missing_weak_combined  = 
+  beta_missing_weak %>% 
+  mutate(coefficient_new = beta_missing_weak_new$coefficient_new) %>% 
+  mutate(diff_coef = coefficient_new - coefficient) %>% 
+  mutate(bias = coefficient - true_beta,
+         bias_new = coefficient_new - true_beta) 
+
+
+beta_missing_weak_combined %>% 
+  filter(n == "1000") %>% 
+  ggplot(aes(x = type, y = bias, color = method)) +
+    geom_boxplot() +
+    facet_grid(~n)
+
+beta_missing_weak_combined %>%  
+  group_by(idx_sim, method, n, type) %>%  
+  summarise(beta_rmse = sqrt(mean((coefficient - true_beta)^2))) %>% 
+  ggplot(aes(x = method, y = beta_rmse, color = n)) +
+    geom_boxplot() +
+    facet_grid(~type)
+
+beta_missing_weak_combined %>%  
+  group_by(idx_sim, method, n, type) %>% 
+  filter(n != "200") %>% 
+  summarise(beta_rmse = sqrt(mean((coefficient - true_beta)^2))) %>% 
+  ggplot(aes(x = method, y = beta_rmse, color = n)) +
+    geom_boxplot() +
+    facet_grid(~type)
+  
+
+
+
+names(beta_more_weak_corr_df)
+unique(beta_more_weak_corr_df$idx_sim)
+unique(beta_more_weak_corr_df$true_beta) %>% sort()
+unique(beta_more_weak_corr_df$type)  
+
+
+
+```
+
