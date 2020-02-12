@@ -34,7 +34,12 @@ beta_less_weak_corr_df <-
          bias = coefficient - true_beta)
 beta_less_weak_corr_df$idx_beta = rep(1:100, each = 2)
 beta_less_weak_corr_df = beta_less_weak_corr_df %>% 
-  select(idx_sim, idx_beta, everything())
+  select(idx_sim, idx_beta, everything()) %>% 
+  mutate(selected = if_else(coefficient==0, 0, 1),
+         is_nonzero = if_else(type == "null", 0, 1),
+         is_TP = if_else(type!="null"&coefficient!=0, 1, 0),
+         is_TN = if_else(type=="null"&coefficient==0, 1, 0)
+         )
 
 # names(beta_less_weak_corr_df)
 # unique(beta_less_weak_corr_df$idx_sim)
@@ -66,12 +71,7 @@ beta_less_weak_corr_df %>%
 
 
 confusion_matrix_df = 
-  beta_less_weak_corr_df %>% 
-  mutate(selected = if_else(coefficient==0, 0, 1),
-         is_nonzero = if_else(type == "null", 0, 1),
-         is_TP = if_else(type!="null"&coefficient!=0, 1, 0),
-         is_TN = if_else(type=="null"&coefficient==0, 1, 0)
-         ) %>% 
+ beta_less_weak_corr_df %>% 
   group_by(idx_sim, method, n) %>% 
   summarize(n_selected = sum(selected),
             n_features = n(),
@@ -84,21 +84,56 @@ confusion_matrix_df =
          accuracy = n_correct/n_features,
          precision = n_TP/n_selected,
          F1_score = 2/(1/precision + 1/sensitivity))
-  
+
+confusion_matrix_type_df = 
+ beta_less_weak_corr_df %>% 
+  group_by(idx_sim, method, n, type) %>% 
+  summarize(n_selected = sum(selected),
+            n_features = n(),
+            n_nonzero = sum(is_nonzero),
+            n_correct = sum(correct),
+            n_TP = sum(is_TP),
+            n_TN = sum(is_TN)) %>% 
+  mutate(sensitivity = n_TP/n_nonzero,
+         specificity = n_TN/(n_features-n_nonzero),
+         accuracy = n_correct/n_features,
+         precision = n_TP/n_selected,
+         F1_score = 2/(1/precision + 1/sensitivity))
+
 confusion_matrix_df %>% 
   ggplot(aes(x = method, y = sensitivity, color = n)) +
     geom_boxplot()
 
+confusion_matrix_type_df %>% 
+  ggplot(aes(x = method, y = sensitivity, color = type)) +
+    geom_boxplot() +
+    facet_grid(~n)
+
 confusion_matrix_df %>% 
-  ggplot(aes(x = method, y = specificity, color = n)) +
-    geom_boxplot()
+  ggplot(aes(x = method, y = specificity)) +
+    geom_boxplot() +
+    facet_grid(~n)
 
 confusion_matrix_df %>% 
   ggplot(aes(x = method, y = accuracy, color = n)) +
     geom_boxplot()
 
+confusion_matrix_type_df %>% 
+  ggplot(aes(x = method, y = accuracy, color = type)) +
+    geom_boxplot() +
+    facet_grid(~n)
+
 confusion_matrix_df %>% 
   ggplot(aes(x = method, y = F1_score, color = n)) +
+    geom_boxplot()
+
+confusion_matrix_type_df %>% 
+  ggplot(aes(x = method, y = F1_score, color = type)) +
+    geom_boxplot() +
+    facet_grid(~n)
+
+confusion_matrix_df %>% 
+    ggplot(aes(x = method, y = n_selected, color = n)) +
     geom_boxplot()
 ```
 
@@ -127,7 +162,12 @@ beta_more_weak_corr_df <-
          bias = coefficient - true_beta)
 beta_more_weak_corr_df$idx_beta = rep(1:100, each = 2)
 beta_more_weak_corr_df = beta_more_weak_corr_df %>% 
-  select(idx_sim, idx_beta, everything())
+  select(idx_sim, idx_beta, everything()) %>% 
+  mutate(selected = if_else(coefficient==0, 0, 1),
+         is_nonzero = if_else(type == "null", 0, 1),
+         is_TP = if_else(type!="null"&coefficient!=0, 1, 0),
+         is_TN = if_else(type=="null"&coefficient==0, 1, 0)
+         ) 
 
 # names(beta_more_weak_corr_df)
 # unique(beta_more_weak_corr_df$idx_sim)
@@ -167,11 +207,6 @@ beta_more_weak_corr_df %>%
 
 confusion_matrix_df2 = 
   beta_more_weak_corr_df %>% 
-  mutate(selected = if_else(coefficient==0, 0, 1),
-         is_nonzero = if_else(type == "null", 0, 1),
-         is_TP = if_else(type!="null"&coefficient!=0, 1, 0),
-         is_TN = if_else(type=="null"&coefficient==0, 1, 0)
-         ) %>% 
   group_by(idx_sim, method, n) %>% 
   summarize(n_selected = sum(selected),
             n_features = n(),
@@ -185,20 +220,57 @@ confusion_matrix_df2 =
          precision = n_TP/n_selected,
          F1_score = 2/(1/precision + 1/sensitivity))
   
-confusion_matrix_df2 %>% 
+
+
+confusion_matrix_type_df2 = 
+ beta_more_weak_corr_df %>% 
+  group_by(idx_sim, method, n, type) %>% 
+  summarize(n_selected = sum(selected),
+            n_features = n(),
+            n_nonzero = sum(is_nonzero),
+            n_correct = sum(correct),
+            n_TP = sum(is_TP),
+            n_TN = sum(is_TN)) %>% 
+  mutate(sensitivity = n_TP/n_nonzero,
+         specificity = n_TN/(n_features-n_nonzero),
+         accuracy = n_correct/n_features,
+         precision = n_TP/n_selected,
+         F1_score = 2/(1/precision + 1/sensitivity))
+
+confusion_matrix_df %>% 
   ggplot(aes(x = method, y = sensitivity, color = n)) +
     geom_boxplot()
 
-confusion_matrix_df2 %>% 
-  ggplot(aes(x = method, y = specificity, color = n)) +
-    geom_boxplot()
+confusion_matrix_type_df2 %>% 
+  ggplot(aes(x = method, y = sensitivity, color = type)) +
+    geom_boxplot() +
+    facet_grid(~n)
 
-confusion_matrix_df2 %>% 
+confusion_matrix_df %>% 
+  ggplot(aes(x = method, y = specificity)) +
+    geom_boxplot() +
+    facet_grid(~n)
+
+confusion_matrix_df %>% 
   ggplot(aes(x = method, y = accuracy, color = n)) +
     geom_boxplot()
 
-confusion_matrix_df2 %>% 
+confusion_matrix_type_df2 %>% 
+  ggplot(aes(x = method, y = accuracy, color = type)) +
+    geom_boxplot() +
+    facet_grid(~n)
+
+confusion_matrix_df %>% 
   ggplot(aes(x = method, y = F1_score, color = n)) +
+    geom_boxplot()
+
+confusion_matrix_type_df2 %>% 
+  ggplot(aes(x = method, y = F1_score, color = type)) +
+    geom_boxplot() +
+    facet_grid(~n)
+
+confusion_matrix_df %>% 
+    ggplot(aes(x = method, y = n_selected, color = n)) +
     geom_boxplot()
 
 ```
@@ -243,16 +315,25 @@ beta_missing_weak_combined  =
   beta_missing_weak %>% 
   mutate(coefficient_new = beta_missing_weak_new$coefficient_new) %>% 
   gather(key = "coef_type", value = "coef", c(coefficient, coefficient_new)) %>% 
-  mutate(bias = coef - true_beta)
+  mutate(bias = coef - true_beta) 
 
-beta_missing_weak_combined %>% 
+temp_df = 
+  beta_missing_weak_combined %>% 
   filter(n != "200") %>% 
   filter(type == "strong") %>% 
-  group_by(idx_sim, method, n, coef_type) %>% 
+  group_by(idx_sim, method, n, coef_type) 
+
+temp_df %>% 
   summarize(beta_rmse = sqrt(mean((coef-true_beta)^2)) ) %>% 
   ggplot(aes(x = method, y = beta_rmse, color = coef_type)) +
     geom_boxplot() +
     facet_grid(~n)
+
+temp_df %>% 
+  filter(true_beta == unique(temp_df$true_beta)[3]) %>% 
+  ggplot(aes(x = method, y = bias, color = coef_type)) +
+    geom_boxplot()
+
 
 
 beta_missing_weak_combined %>% 
@@ -264,6 +345,15 @@ beta_missing_weak_combined %>%
     geom_boxplot() +
     facet_grid(~n)
 
-
+bind_cols(beta_missing_weak, beta_missing_weak_new) %>% 
+  mutate(coef_diff = coefficient_new - coefficient) %>% 
+  filter(n != "200") %>%
+  filter(type == "strong") %>% 
+  group_by(idx_sim, method, n) %>% 
+  summarize(mean_coef_diff = mean(coef_diff) ) %>% 
+  ggplot(aes(x = method, y = mean_coef_diff)) +
+    geom_boxplot() +
+    facet_grid(~n) 
+    
 ```
 
