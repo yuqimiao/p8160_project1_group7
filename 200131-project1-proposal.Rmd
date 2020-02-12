@@ -93,16 +93,16 @@ By tuning parameters differently, robustness of the variable selection methods w
 * identification F1 score
 * bias
 
-$$\frac{1}{n}\sum_{i=1}^n(\hat{\boldsymbol\beta}-\boldsymbol\beta)$$
+$$\frac{1}{p}\sum_{i=1}^p(\hat{\boldsymbol\beta}-\boldsymbol\beta)$$
 
 
 * variance 
 
-$$\frac{1}{n}\sum_{i=1}^n(\hat{\boldsymbol\beta}-\overline{\boldsymbol \beta})^2$$
+$$\frac{1}{p}\sum_{i=1}^p(\hat{\boldsymbol\beta}-\overline{\boldsymbol \beta})^2$$
 
 * MSE
 
-$$\frac{1}{n}\sum_{i=1}^n(\hat{\boldsymbol\beta}-\boldsymbol\beta)^2$$
+$$\frac{1}{p}\sum_{i=1}^p(\hat{\boldsymbol\beta}-\boldsymbol\beta)^2$$
 
 * summary
 ## 6.2 tuning strong-to-weak ratio of predictors
