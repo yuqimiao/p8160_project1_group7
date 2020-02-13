@@ -8,6 +8,7 @@ output: html_document
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 library(tidyverse)
+library(patchwork)
 ``` 
 
 # strong:weak_corr:weak = 5:1:4
@@ -103,12 +104,19 @@ confusion_matrix_type_df =
 confusion_matrix_df %>% 
   ggplot(aes(x = method, y = sensitivity, color = n)) +
     geom_boxplot()
+```
 
-confusion_matrix_type_df %>% 
+
+```{r}
+g1 = confusion_matrix_type_df %>% 
   ggplot(aes(x = method, y = sensitivity, color = type)) +
     geom_boxplot() +
-    facet_grid(~n)
+    facet_grid(~n) +
+  ggtitle("5:1:4 sensitivity")
+```
 
+
+```{r}
 confusion_matrix_df %>% 
   ggplot(aes(x = method, y = specificity)) +
     geom_boxplot() +
@@ -139,7 +147,6 @@ confusion_matrix_df %>%
 
 # strong : weak_corr : weak = 5:3:2
 ```{r}
-
 result_more_weak_corr_n200 = readRDS("./R_script/result_more_weak_corr_n200.rds")
 result_more_weak_corr_n1000 = readRDS("./R_script/result_more_weak_corr_n1000.rds")
 result_more_weak_corr_n5000 = readRDS("./R_script/result_more_weak_corr_n5000.rds")
@@ -240,12 +247,21 @@ confusion_matrix_type_df2 =
 confusion_matrix_df %>% 
   ggplot(aes(x = method, y = sensitivity, color = n)) +
     geom_boxplot()
+```
 
-confusion_matrix_type_df2 %>% 
+
+```{r}
+g2 = confusion_matrix_type_df2 %>% 
   ggplot(aes(x = method, y = sensitivity, color = type)) +
     geom_boxplot() +
-    facet_grid(~n)
+    facet_grid(~n)+
+  ggtitle("5:3:2 sensitivity")
+g1/g2
+ggsave(g1/g2,file = "sensitivity.png")
+```
 
+
+```{r}
 confusion_matrix_df %>% 
   ggplot(aes(x = method, y = specificity)) +
     geom_boxplot() +

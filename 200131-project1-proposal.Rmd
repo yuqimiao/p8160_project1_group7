@@ -32,6 +32,19 @@ where $\lambda$ is a tunning parameter. Cross-validation (CV) is the most common
 * weak-to-strong predictor ratio;
 In this study, we want to simulate the situation where the predictors are having underlying correlation, we define certain scenarios to compute the robustness of 2 variable selection methods.
 
+3.2 tuning parameter
+Sample size: 
+1) n = 200
+2) n = 1000
+3) n = 5000
+Strength predictors ratio:
+ The total number of predictors are 200, where 100 are noise predictors. Here we consider 2 strength predictors ratio ( r: strength: weak_but_correlated: weak_and_independent )
+	1) r = 5:1:4
+	2) r = 5:3:2
+6 combinations of above parameters are the scenario to be studied 
+
+ 
+
 # 4 Methods for generating data 
 
  the simulated population needs to meet following characteristics：Firstly,the expectation of outcome variable is the linear combination of predictors with an constant-variance error term; Secondly, the predictors are mutually correlated, Thirdly, the parameters are distinctly correlated with outcome, which is classified by a critical value. The detailed definitions of data generating funcion parameters are as follows:
@@ -89,8 +102,7 @@ By tuning parameters differently, robustness of the variable selection methods w
 
 # 6 simulation results. 
 
-## 6.1 tuning predictor numbers
-* identification F1 score
+## 6.1  identification performance
 * bias
 
 $$\frac{1}{p}\sum_{i=1}^p(\hat{\boldsymbol\beta}-\boldsymbol\beta)$$
@@ -104,14 +116,14 @@ $$\frac{1}{p}\sum_{i=1}^p(\hat{\boldsymbol\beta}-\overline{\boldsymbol \beta})^2
 
 $$\frac{1}{p}\sum_{i=1}^p(\hat{\boldsymbol\beta}-\boldsymbol\beta)^2$$
 
-* summary
-## 6.2 tuning strong-to-weak ratio of predictors
+6.2 Parameter Estimation 
 
-## 6.3 tuning the degree of correlation
+1. bias
 
-## 6.4 tunning samplesize
 
-## 7 summary
+2. rmse
 
+
+3. comparision of missing vs no missing
 
 
