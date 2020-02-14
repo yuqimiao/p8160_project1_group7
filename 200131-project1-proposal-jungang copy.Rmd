@@ -1,0 +1,630 @@
+---
+title: "p8160-project1"
+output: 
+  pdf_document:
+    latex_engine: xelatex
+---
+
+```{r,include=FALSE}
+
+
+library(tidyverse)
+library(patchwork)
+
+result_less_weak_corr_n200 = readRDS("./R_script/result_less_weak_corr_n200.rds")
+result_less_weak_corr_n1000 = readRDS("./R_script/result_less_weak_corr_n1000.rds")
+result_less_weak_corr_n5000 = readRDS("./R_script/result_less_weak_corr_n5000.rds")
+
+result_less_weak_corr_n200$percentage
+
+beta_less_weak_corr_n200 = result_less_weak_corr_n200$measures
+beta_less_weak_corr_n1000 = result_less_weak_corr_n1000$measures
+beta_less_weak_corr_n5000 = result_less_weak_corr_n5000$measures
+
+beta_less_weak_corr_df <-
+  bind_rows(beta_less_weak_corr_n200, 
+            beta_less_weak_corr_n1000,
+            beta_less_weak_corr_n5000) %>% 
+  rename(idx_sim = idx) %>% 
+  mutate(true_beta = (true_beta),
+         coefficient = (coefficient),
+         n = as.factor(n)) %>% 
+  mutate(bias2 = (coefficient - true_beta)^2,
+         bias = coefficient - true_beta)
+beta_less_weak_corr_df$idx_beta = rep(1:100, each = 2)
+beta_less_weak_corr_df = beta_less_weak_corr_df %>% 
+  select(idx_sim, idx_beta, everything()) %>% 
+  mutate(selected = if_else(coefficient==0, 0, 1),
+         is_nonzero = if_else(type == "null", 0, 1),
+         is_TP = if_else(type!="null"&coefficient!=0, 1, 0),
+         is_TN = if_else(type=="null"&coefficient==0, 1, 0)
+         )
+
+# names(beta_less_weak_corr_df)
+# unique(beta_less_weak_corr_df$idx_sim)
+# unique(beta_less_weak_corr_df$true_beta) %>% sort()
+# unique(beta_less_weak_corr_df$type) 
+
+## plots of beta estimates
+beta_less_weak_corr_df %>% 
+  filter(n == 200) %>% 
+  group_by(idx_sim, method, type, n) %>% 
+  summarise(beta_rmse = sqrt(mean(bias2)),
+            beta_bias_mean = mean(bias)) %>% 
+  ggplot(aes(x = method, y = beta_rmse, color = type)) +
+    geom_boxplot() +
+    facet_grid(~n)
+
+beta_less_weak_corr_df %>% 
+  filter(n != 200) %>% 
+  group_by(idx_sim, method, type, n) %>% 
+  summarise(beta_rmse = sqrt(mean(bias2)),
+            beta_bias_mean = mean(bias)) %>% 
+  ggplot(aes(x = method, y = beta_rmse, color = type)) +
+    geom_boxplot() +
+    facet_grid(~n)
+
+beta_less_weak_corr_df %>% 
+  ggplot(aes(x = method, y = bias, color = type)) +
+    geom_boxplot()
+
+
+confusion_matrix_df = 
+ beta_less_weak_corr_df %>% 
+  group_by(idx_sim, method, n) %>% 
+  summarize(n_selected = sum(selected),
+            n_features = n(),
+            n_nonzero = sum(is_nonzero),
+            n_correct = sum(correct),
+            n_TP = sum(is_TP),
+            n_TN = sum(is_TN)) %>% 
+  mutate(sensitivity = n_TP/n_nonzero,
+         specificity = n_TN/(n_features-n_nonzero),
+         accuracy = n_correct/n_features,
+         precision = n_TP/n_selected,
+         F1_score = 2/(1/precision + 1/sensitivity))
+
+confusion_matrix_type_df = 
+ beta_less_weak_corr_df %>% 
+  group_by(idx_sim, method, n, type) %>% 
+  summarize(n_selected = sum(selected),
+            n_features = n(),
+            n_nonzero = sum(is_nonzero),
+            n_correct = sum(correct),
+            n_TP = sum(is_TP),
+            n_TN = sum(is_TN)) %>% 
+  mutate(sensitivity = n_TP/n_nonzero,
+         specificity = n_TN/(n_features-n_nonzero),
+         accuracy = n_correct/n_features,
+         precision = n_TP/n_selected,
+         F1_score = 2/(1/precision + 1/sensitivity))
+
+confusion_matrix_df %>% 
+  ggplot(aes(x = method, y = sensitivity, color = n)) +
+    geom_boxplot()+
+  ggtitle("5:1:4 sensitivity")+ 
+  theme(legend.position = "bottom")
+
+confusion_matrix_type_df %>% 
+  ggplot(aes(x = method, y = sensitivity, color = n)) +
+    geom_boxplot() +
+    facet_grid(~n) 
+
+confusion_matrix_df %>% 
+  ggplot(aes(x = method, y = specificity,color = n)) +
+    geom_boxplot()+
+  ggtitle("5:1:4 specificity")
+
+confusion_matrix_df %>% 
+  ggplot(aes(x = method, y = accuracy, color = n)) +
+    geom_boxplot()
+
+confusion_matrix_type_df %>% 
+  ggplot(aes(x = method, y = accuracy, color = type)) +
+    geom_boxplot() +
+    facet_grid(~n)
+
+confusion_matrix_df %>% 
+  ggplot(aes(x = method, y = F1_score, color = n)) +
+    geom_boxplot()+
+  ggtitle("5:1:4 F1 score")
+
+confusion_matrix_type_df %>% 
+  ggplot(aes(x = method, y = sensitivity, color = type)) +
+    geom_boxplot() +
+    facet_grid(~n)+ 
+  theme(legend.position = "bottom") +
+  ggtitle("5:1:4 sensitivity by type")
+  
+
+confusion_matrix_df %>% 
+    ggplot(aes(x = method, y = n_selected, color = n)) +
+    geom_boxplot()
+
+result_more_weak_corr_n200 = readRDS("./R_script/result_more_weak_corr_n200.rds")
+result_more_weak_corr_n1000 = readRDS("./R_script/result_more_weak_corr_n1000.rds")
+result_more_weak_corr_n5000 = readRDS("./R_script/result_more_weak_corr_n5000.rds")
+
+result_more_weak_corr_n200$percentage
+
+beta_more_weak_corr_n200 = result_more_weak_corr_n200$measures
+beta_more_weak_corr_n1000 = result_more_weak_corr_n1000$measures
+beta_more_weak_corr_n5000 = result_more_weak_corr_n5000$measures
+
+beta_more_weak_corr_df <-
+  bind_rows(beta_more_weak_corr_n200, 
+            beta_more_weak_corr_n1000,
+            beta_more_weak_corr_n5000) %>% 
+  rename(idx_sim = idx) %>% 
+  mutate(true_beta = abs(true_beta),
+         coefficient = abs(coefficient),
+         n = as.factor(n)) %>% 
+  mutate(bias2 = (coefficient - true_beta)^2,
+         bias = coefficient - true_beta)
+beta_more_weak_corr_df$idx_beta = rep(1:100, each = 2)
+beta_more_weak_corr_df = beta_more_weak_corr_df %>% 
+  select(idx_sim, idx_beta, everything()) %>% 
+  mutate(selected = if_else(coefficient==0, 0, 1),
+         is_nonzero = if_else(type == "null", 0, 1),
+         is_TP = if_else(type!="null"&coefficient!=0, 1, 0),
+         is_TN = if_else(type=="null"&coefficient==0, 1, 0)
+         ) 
+
+# names(beta_more_weak_corr_df)
+# unique(beta_more_weak_corr_df$idx_sim)
+# unique(beta_more_weak_corr_df$true_beta) %>% sort()
+# unique(beta_more_weak_corr_df$type) 
+# table(beta_more_weak_corr_df$type, beta_more_weak_corr_df$method)
+
+## plots of beta estimates
+beta_more_weak_corr_df %>% 
+  filter(n == 200) %>% 
+  group_by(idx_sim, method, type, n) %>% 
+  summarise(beta_rmse = sqrt(mean(bias2)),
+            beta_bias_mean = mean(bias)) %>% 
+  ggplot(aes(x = method, y = beta_bias_mean, color = type)) +
+    geom_boxplot() +
+    facet_grid(~n)
+
+beta_more_weak_corr_df %>% 
+  filter(n != 200) %>% 
+  group_by(idx_sim, method, type, n) %>% 
+  summarise(beta_rmse = sqrt(mean(bias2)),
+            beta_bias_mean = mean(bias)) %>% 
+  ggplot(aes(x = method, y = beta_bias_mean, color = type)) +
+    geom_boxplot() +
+    facet_grid(~n)
+
+beta_more_weak_corr_df %>% 
+  filter(n != 200) %>% 
+  group_by(idx_sim, method, type, n) %>% 
+  summarise(beta_rmse = sqrt(mean(bias2)),
+            beta_bias_mean = mean(bias)) %>% 
+  ggplot(aes(x = method, y = beta_rmse)) +
+    geom_boxplot() +
+    facet_grid(~n)
+
+
+
+confusion_matrix_df2 = 
+  beta_more_weak_corr_df %>% 
+  group_by(idx_sim, method, n) %>% 
+  summarize(n_selected = sum(selected),
+            n_features = n(),
+            n_nonzero = sum(is_nonzero),
+            n_correct = sum(correct),
+            n_TP = sum(is_TP),
+            n_TN = sum(is_TN)) %>% 
+  mutate(sensitivity = n_TP/n_nonzero,
+         specificity = n_TN/(n_features-n_nonzero),
+         accuracy = n_correct/n_features,
+         precision = n_TP/n_selected,
+         F1_score = 2/(1/precision + 1/sensitivity))
+  
+
+
+confusion_matrix_type_df2 = 
+ beta_more_weak_corr_df %>% 
+  group_by(idx_sim, method, n, type) %>% 
+  summarize(n_selected = sum(selected),
+            n_features = n(),
+            n_nonzero = sum(is_nonzero),
+            n_correct = sum(correct),
+            n_TP = sum(is_TP),
+            n_TN = sum(is_TN)) %>% 
+  mutate(sensitivity = n_TP/n_nonzero,
+         specificity = n_TN/(n_features-n_nonzero),
+         accuracy = n_correct/n_features,
+         precision = n_TP/n_selected,
+         F1_score = 2/(1/precision + 1/sensitivity))
+
+confusion_matrix_df %>% 
+  ggplot(aes(x = method, y = sensitivity, color = n)) +
+    geom_boxplot()+
+  ggtitle("5:3:2 sensitivity")+ 
+  theme(legend.position = "bottom")
+
+confusion_matrix_type_df2 %>% 
+  ggplot(aes(x = method, y = sensitivity, color = type)) +
+    geom_boxplot() +
+    facet_grid(~n)+
+  ggtitle("5:3:2 sensitivity by type")+ 
+  theme(legend.position = "bottom")
+
+
+confusion_matrix_df %>% 
+  ggplot(aes(x = method, y = specificity,color = n)) +
+    geom_boxplot()+
+  ggtitle("5:3:2, specificity")
+
+confusion_matrix_df %>% 
+  ggplot(aes(x = method, y = accuracy, color = n)) +
+    geom_boxplot()
+
+confusion_matrix_type_df2 %>% 
+  ggplot(aes(x = method, y = accuracy, color = type)) +
+    geom_boxplot() +
+    facet_grid(~n)
+
+confusion_matrix_df %>% 
+  ggplot(aes(x = method, y = F1_score, color = n)) +
+    geom_boxplot()+
+  ggtitle("5:3:2, F1_score")
+
+confusion_matrix_type_df2 %>% 
+  ggplot(aes(x = method, y = F1_score, color = type)) +
+    geom_boxplot() +
+    facet_grid(~n)
+
+confusion_matrix_df %>% 
+    ggplot(aes(x = method, y = n_selected, color = n)) +
+    geom_boxplot()
+
+
+result_missing_weak_n200 = readRDS("./R_script/result_missing_weak_n200.rds")
+result_missing_weak_n1000 = readRDS("./R_script/result_missing_weak_n1000.rds")
+result_missing_weak_n5000 = readRDS("./R_script/result_missing_weak_n5000.rds")
+
+result_missing_weak_n200$percentage
+
+beta_missing_weak_n200 = result_missing_weak_n200$measures
+beta_missing_weak_n1000 = result_missing_weak_n1000$measures 
+beta_missing_weak_n5000 = result_missing_weak_n5000$measures 
+
+beta_missing_weak_n200_new = result_missing_weak_n200$measures_new
+beta_missing_weak_n1000_new = result_missing_weak_n1000$measures_new
+beta_missing_weak_n5000_new = result_missing_weak_n5000$measures_new
+
+beta_missing_weak <-
+  bind_rows(beta_missing_weak_n200, 
+            beta_missing_weak_n1000,
+            beta_missing_weak_n5000) %>% 
+  filter(type %in% c("strong", "null")) %>% 
+  rename(idx_sim = idx) %>% 
+  mutate(n = as.factor(n))   
+
+beta_missing_weak_new <-
+  bind_rows(beta_missing_weak_n200_new, 
+            beta_missing_weak_n1000_new,
+            beta_missing_weak_n5000_new) %>% 
+  rename(idx_sim = idx) %>% 
+  mutate(n = as.factor(n)) %>%  
+  rename(coefficient_new = coefficient)
+
+beta_missing_weak_combined  = 
+  beta_missing_weak %>% 
+  mutate(coefficient_new = beta_missing_weak_new$coefficient_new) %>% 
+  gather(key = "coef_type", value = "coef", c(coefficient, coefficient_new)) %>% 
+  mutate(bias = coef - true_beta) 
+
+temp_df = 
+  beta_missing_weak_combined %>% 
+  filter(n != "200") %>% 
+  filter(type == "strong") %>% 
+  group_by(idx_sim, method, n, coef_type) 
+
+temp_df %>% 
+  summarize(beta_rmse = sqrt(mean((coef-true_beta)^2)) ) %>% 
+  ggplot(aes(x = method, y = beta_rmse, color = coef_type)) +
+    geom_boxplot() +
+    facet_grid(~n)
+
+temp_df %>% 
+  filter(true_beta == unique(temp_df$true_beta)[3]) %>% 
+  ggplot(aes(x = method, y = bias, color = coef_type)) +
+    geom_boxplot()
+
+
+
+beta_missing_weak_combined %>% 
+  filter(n != "200") %>% 
+  filter(type == "strong") %>% 
+  group_by(idx_sim, method, n, coef_type) %>% 
+  summarize(beta_bias = mean(bias) ) %>% 
+  ggplot(aes(x = method, y = beta_bias, color = coef_type)) +
+    geom_boxplot() +
+    facet_grid(~n)
+
+bind_cols(beta_missing_weak, beta_missing_weak_new) %>% 
+  mutate(coef_diff = coefficient_new - coefficient) %>% 
+  filter(n != "200") %>%
+  filter(type == "strong") %>% 
+  group_by(idx_sim, method, n) %>% 
+  summarize(mean_coef_diff = mean(coef_diff) ) %>% 
+  ggplot(aes(x = method, y = mean_coef_diff)) +
+    geom_boxplot() +
+    facet_grid(~n) 
+
+
+```
+
+```{r,echo = FALSE}
+## identification plots
+g1 =confusion_matrix_df %>% 
+  ggplot(aes(x = method, y = F1_score, color = n)) +
+    geom_boxplot()+
+  ggtitle("5:1:4 F1 score")
+
+g2 = confusion_matrix_df %>% 
+  ggplot(aes(x = method, y = F1_score, color = n)) +
+    geom_boxplot()+
+  ggtitle("5:3:2, F1_score")
+
+g3 = confusion_matrix_df %>% 
+  ggplot(aes(x = method, y = n_selected,color = n))+
+  geom_boxplot()+
+  ggtitle("5:1:4 model size")
+    
+g4 = confusion_matrix_df2 %>% 
+  ggplot(aes(x = method, y = n_selected, color = n)) +
+    geom_boxplot()+
+    ggtitle("5:3:2 model size")
+
+
+g5 = confusion_matrix_df %>% 
+  ggplot(aes(x = method, y = sensitivity, color = n)) +
+    geom_boxplot()+
+  ggtitle("5:1:4 sensitivity")+ 
+  theme(legend.position = "bottom")
+
+g6 =confusion_matrix_df %>% 
+  ggplot(aes(x = method, y = sensitivity, color = n)) +
+    geom_boxplot()+
+  ggtitle("5:3:2 sensitivity")+ 
+  theme(legend.position = "bottom")
+
+
+
+g7= confusion_matrix_type_df %>% 
+  ggplot(aes(x = method, y = sensitivity, color = type)) +
+    geom_boxplot() +
+    facet_grid(~n)+ 
+  theme(legend.position = "bottom") +
+  ggtitle("5:1:4 sensitivity by type")
+
+
+g8 = confusion_matrix_type_df2 %>% 
+  ggplot(aes(x = method, y = sensitivity, color = type)) +
+    geom_boxplot() +
+    facet_grid(~n)+
+  ggtitle("5:3:2 sensitivity by type")+ 
+  theme(legend.position = "bottom")
+
+
+g9 = confusion_matrix_df %>% 
+  ggplot(aes(x = method, y = specificity,color = n)) +
+    geom_boxplot()+
+  ggtitle("5:1:4 specificity")
+
+g10 = confusion_matrix_df %>% 
+  ggplot(aes(x = method, y = specificity,color = n)) +
+    geom_boxplot()+
+  ggtitle("5:3:2, specificity")
+
+
+g11 = confusion_matrix_type_df %>% 
+  ggplot(aes(x = method, y = accuracy, color = type)) +
+    geom_boxplot() +
+    facet_grid(~n)+
+    ggtitle("5:1:4 accuracy by type")
+
+g12 = confusion_matrix_type_df2 %>% 
+  ggplot(aes(x = method, y = accuracy, color = type)) +
+    geom_boxplot() +
+    facet_grid(~n)+
+    ggtitle("5:3:2 accuracy by type")
+```
+
+
+
+# 1 Objectives 
+Design a simulation study to investigate and illustrate 
+how well each of the two methods in identifying weak and strong predictors;
+how missing “weak” predictors impacts the parameter estimations. 
+To do so, you need to simulate data with a combination of strong'',weak-but-correlated” and “weak-and- independent” predictors. 
+
+# 2 Statistical methods to be studied 
+
+## 2.1 Step-wise forward method
+
+Starting with the empty model, and iteratively adds the variables that best improves the model fit. That is often done by sequentially adding predictors with the largest reduction in AIC. For linear models,
+$$AIC=n\ln(\sum_{i=1}^n{(y_i-\widehat{y_i})}^2/n)+2p$$
+where $\widehat{y_i}$ is the fitted values from a model, and $p$ is the dimension of the model (i.e.,number of predictors plus 1).
+
+## 2.2 Automated LASSO regression LASSO
+
+another popular method for variable selection. It estimates the model parameters by optimizing a penalized loss function:
+
+$$\underset\beta{min}\frac{1}{2n}\sum_{i=1}^n(y_i-x_i\beta)^2+\lambda\sum_{k=1}^p|\beta_k|$$
+where $\lambda$ is a tunning parameter. We use Cross-validation (CV) to select $\lambda$ for LASSO.
+
+
+# 3 Scenarios to be investigated 
+
+* weak-to-strong predictor ratio;
+In this study, we want to simulate the situation where the predictors are having underlying correlation, we define certain scenarios to compute the robustness of 2 variable selection methods.
+
+3.2 tuning parameter
+Sample size: 
+1) n = 200
+2) n = 1000
+3) n = 5000
+Strength predictors ratio:
+ The total number of predictors are 200, where 100 are noise predictors. Here we consider 2 strength predictors ratio ( r: strength: weak_but_correlated: weak_and_independent )
+	1) r = 5:1:4
+	2) r = 5:3:2
+6 combinations of above parameters are the scenario to be studied 
+
+ 
+
+# 4 Methods for generating data 
+
+ the simulated population needs to meet following characteristics：Firstly,the expectation of outcome variable is the linear combination of predictors with an constant-variance error term; Secondly, the predictors are mutually correlated, Thirdly, the parameters are distinctly correlated with outcome, which is classified by a critical value. The detailed definitions of data generating funcion parameters are as follows:
+
+## 4.1 Distribution of population
+
+True distribution of outcome variable is defined as 
+$$Y\sim N(\boldsymbol X\boldsymbol \beta, \sigma^2)$$
+
+Where $\boldsymbol X$ is the predictor matrix, $\boldsymbol \beta$ is the parameters vector and $\sigma^2$ is the constant variance in normal distribution.
+
+## 4.2 Predictor strenghth
+
+The strength of parameters are defined by following criterias:
+
+Definition of strong predictors:
+
+$$S_1 = \left\{j:|\beta_j|>c\sqrt{\log(p)/n},some\ c>0,1\leq j\leq p\right\}$$
+
+Definition of weak but correlated predictors:
+
+  $$S_2 = \left\{j:0<|\beta_j|\leq c\sqrt{\log(p)/n},some\ c>0,corr(X_i,X_{j'})\neq0,some\ j'\in S_1,1\leq j\leq p\right\}$$
+Definition of weak and independent predictors:
+
+$$S_3 = \left\{j:0<|\beta_j|\leq c\sqrt{\log(p)/n},some\ c>0,corr(X_i,X_{j'})=0,all\ j'\in S_1,1\leq j\leq p\right\}$$
+Definition of noise:\
+$$S_4 = \left\{j:|\beta_j| = 0,1\leq j\leq p\right\}$$
+
+Parameters can be generated by 2 ways. Firstly, given beta by artificial setting, and secondly, by defining constant c, parameters are generated uniformly with in above ranges.
+
+## 4.3 Parameter correlation
+
+The data of predictors are generated by R function `mvrnorm`. In order to change the correlation between different predictors, a pre-defined covariance matrix is passed to `mvrnorm` function. Here we consider a certain scenario: the strong variables and a certain ratio of weak variables are indepent to other variables, and other weak predictors are correlated with 1 specific strong variable. To ensure the positive definite attribute of covariance matrix, we restrict one strong predictor can only be correlated with one weak predictor.
+
+
+
+
+# 5 performance measures 
+## 5.1 Predictor identification performance
+
+In order to compare the identification performance for these 2 methods, we regard the identification as a classification problem, where the signal predictors are defined as positive and null predictors are defined as negative. 3 indicators have been established:
+
+$$ recall = sensitivity=\left(\frac{True\ positive}{True\ positive+False\ negative}\right)$$
+$$specificity=\left(\frac{True\ negative}{True\ negative+False\ positive}\right)$$
+
+$$accurcy=\frac{True\ selection}{total\ number\ of\ predictors}$$
+
+$$F_1=\left(\frac{2}{recall^{-1}+precision^{-1}}\right)$$
+Where precision is defined as above, and recall is defined as
+
+$$precision=\left(\frac{True\ positive}{True\ positive+False\ positive}\right)$$
+
+
+## 5.2 estimation performance
+
+To compare the paramater estimation performance, 3 indicators were calculated to evaluate the estimation: bias is calculated as the mean difference between true parameter and estimated parameters, variance is defined as the variance of the estimated parameter among simulation, and MSE
+
+By tuning parameters differently, robustness of the variable selection methods were also evaluated through the above indicators.
+
+
+# 6 simulation results. 
+
+## 6.1  identification performance
+
+F1 score (see Fig 1.) is used as an indicater for an overall performance assessment for identification signals. There is a clear trend for both methods that when the ratio of predictors to sample size is decreasing, the overal performance enhances, and there is no significant difference between this two methods when sample size is large enough comparing to predictor numbers, while in high dimensional occasion(where n = p), stepwise has a poor performance. 
+
+In terms of variable selection size (see Fig 2.) , lasso tends to choose more predictors while stepwise tend to choose less overall, in the settings of this report, where there are 100 true signals and 100 noises, lasso select more predictors than true occasion in all scenarios, while stepwise tends to choose less. When comparing in terms of sample size, lasso performs stably in both high dimensional(where n = p) and normal scenario, but stepwise tends lose its select ability when the ratio between number of parameters and sample size is large. 
+
+Sensitivity (see Fig 3.)  is an indicator for how many predictors can be captured by the methods. For lasso, strong predictors can be perfectly captures in all scenario with stable performance, while for weak predictors, difference occurs when correlated-to-independent ratios change, for less correlated scenario, lasso tends to perform better to capture weak and independent predictors compare to weak but correlated predictors, while in more correlated case, there is no clear difference between these two types of predictors, and performance for capture weak but correlated predictors is relatively stable. For stepwise methods, except for the same stability for capture weak but correlated predictors in  more correlated scenario, there is no clear difference in different settings. When comparing the sensitivity of these 2 methods, lasso performs better overall but with a comparatively higher variance, and stepwise has a relatively poor performance in aspect of capturing weak predictors in all settings, but the performance stabilise at 0.1 to 0.25. 
+
+Correspondingly, the specificity (see Fig 4.) for stepwise is relatively higher since there is an overal trend for over-screening, but the specificity performance for lasso is also acceptable especially when the predictor-to-sample-size ratio decrease.
+
+Finally, comparing the accuracy of these two methods (see Fig 5.) , lasso performs better in every category of predictors in 6 settings. Above all, in terms of variable identification performance, lasso tends to over-select predictors and performs stable in high dimensional scenarios, while stepwise tends to under-select predictors with a lower overall performance and less accuracy. As compare to the correlation bettween predictors, there is also a clear trend that a lower correlation ratio of predictors tends to decrease the overall variance of identification performance, this may due to the high correlation between predictors may reduce the overall variance of the sample space and leads a more stable selection results.
+
+
+
+6.2 Parameter Estimation 
+
+* bias
+
+$$\frac{1}{p}\sum_{i=1}^p(\hat{\boldsymbol\beta}-\boldsymbol\beta)$$
+
+
+* variance 
+
+$$\frac{1}{p}\sum_{i=1}^p(\hat{\boldsymbol\beta}-\overline{\boldsymbol \beta})^2$$
+
+* MSE
+
+$$\frac{1}{p}\sum_{i=1}^p(\hat{\boldsymbol\beta}-\boldsymbol\beta)^2$$
+
+1. bias
+
+
+2. rmse
+
+
+3. comparision of missing vs no missing
+
+In this part, we will discuss how missing "weak" signals impact the coefficients in linear models. Due to the definition of "missing variables", we consider 2 situations. The first part is the original "no missing" models, which we have discussed above. The second part is the "missing" models, which were constructed by deleting the weak_but_correlated data and weak_independent data. After model constructions, we`d like to analyze the performance of "no missing" models and "missing" models.
+
+
+The procedure to construct models in 2 situations is as follows:
+
+* Use calculated covariance matrix to generate "no missing" data $X_{true}$, and generate random noise $\epsilon$.
+* Use pre-calculated $\beta_{true}$, "no missing" data $X_{true}$ and random noise $\epsilon$ to calculate response variable $Y = X_{true} \beta_{true} + \epsilon$
+* Apply lasso and stepwise regression on "no missing" data $X_{true}$, to get the estimated "no missing" model $\hat{Y} = X_{true} \hat{\beta_{no}}$ and estimated coefficient $\hat{\beta_{no}}$.
+* Delete the weak_but_correlated and weak_independent variables in "no missing" data $X_{true}$, to get "missing" data $X_{missing}$.
+* Apply lasso and stepwise regression on "missing" data $X_{missing}$, to get the estimated "missing" model $\hat{Y} = X_{missing} \hat{\beta_{missing}}$ and estimated coefficient $\hat{\beta_{missing}}$.
+
+
+
+1) bias
+
+As mentioned above, bias is an important criterion to assess model performance. As in Fig , we can see that with the increasing number of samples, the biases for both models are becoming small, because of the average effect on outliers. Another important criterion variance also shows negative relationship when sample size becomes large. So for both "missing" and "no missing" models, the large number of sample size has positive effect to decrease both bias and variance.
+
+For lasso models and stepwise models, we find different result. For stepwise model, we can find the average of bias has very little difference between "missing" and "no missing" data. However, things become distinct for lasso models. With the "missing" data, we find lasso models perform better than "no missing" data, regardless of sample size. This significant difference may result from the different mechanism of model selection. For stepwise model, a variable will be decided to include in the model or not. On the other hand, the lasso model uses shrinkage method and considers the co-effect among all the variables. If a variable is not important, lasso model will gradually shrink its coefficient to 0 by considering the relationships for other variables. As a result, in model selection, lasso model is easy to be influenced by weak signals. On the contrary, stepwise model is robust for weak signals.
+
+2) rmse
+
+After we draw the conclusion of bias, we need to analyse the rmse for both models. As in Fig , we can see that with the increasing number of samples, the rmse for both models are becoming small, due to the decrease for both bias and variance.
+
+For lasso models and stepwise models, we find the result same as bias. For stepwise model, the average of rmse has very little difference between "missing" and "no missing" data. However, the lasso model has smaller rmse and large rmse variance with "missing" data. This result shows the disappearance of weak signals will improve the performance of lasso model, and has little significance for stepwise.
+
+However, as is known to us, lasso model is a regularized model that can decrease the predictive error on test dataset. This property indicates lasso models have better generalization ability over all the sample space. Due to the bias nad variance tradeoff, lasso models increase its bias to decrease its variance. So, on training dataset, the rmse of lasso will be larger than rmse of stepwise model. However, on the test dataset, the rmse of lasso will be smaller than rmse of stepwise model. In conclusion, stepwise model is likely to be overfitting on the training dataset.
+
+Finally, we can draw the conclusion, that stepwise model is robust to weak signals, and lasso model shows a significant improvement with "missing" data.
+
+```{r,echo = FALSE, fig.cap="F1 score for 2 variable selection methods in 6 settings", fig.height=7,fig.width= 7}
+g1/g2
+```
+
+```{r,echo = FALSE,fig.cap="Model size for 2 variable selection methods in 6 settings", fig.height=7,fig.width= 7}
+g3/g4
+```
+
+```{r, echo = FALSE, fig.cap="Sensitivity for 2 variable selection methods in 6 settings", fig.height=7,fig.width= 9,warning=FALSE}
+ (g5+g6)/(g7+g8)
+```
+
+```{r,echo = FALSE, fig.cap="Specificity for 2 variable selection methods in 6 settings", fig.height= 7,fig.width= 7}
+g9/g10
+```
+
+```{r,echo = FALSE, fig.cap="Specificity for 2 variable selection methods in 6 settings", fig.height=7,fig.width= 7}
+g11/g12
+```
+
+
+
+
