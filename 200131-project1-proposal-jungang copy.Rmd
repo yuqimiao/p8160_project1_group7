@@ -1,12 +1,12 @@
 ---
-title: "p8160-project1"
+title: "P8160 Project 1 - Designing a simulation study to compare variable Selection methods"
+author: "Yuqi Miao (ym2771), Jiayi Shen (js5354), Jack Yan (xy2395), Jungang Zou (jz3183)"
 output: 
   pdf_document:
     latex_engine: xelatex
 ---
 
 ```{r,include=FALSE}
-
 
 library(tidyverse)
 library(patchwork)
@@ -170,14 +170,10 @@ beta_more_weak_corr_df = beta_more_weak_corr_df %>%
          is_TN = if_else(type=="null"&coefficient==0, 1, 0)
          ) 
 
-# names(beta_more_weak_corr_df)
-# unique(beta_more_weak_corr_df$idx_sim)
-# unique(beta_more_weak_corr_df$true_beta) %>% sort()
-# unique(beta_more_weak_corr_df$type) 
-# table(beta_more_weak_corr_df$type, beta_more_weak_corr_df$method)
 
 ## plots of beta estimates
-beta_more_weak_corr_df %>% 
+p_bias_1 = 
+  beta_more_weak_corr_df %>% 
   filter(n == 200) %>% 
   group_by(idx_sim, method, type, n) %>% 
   summarise(beta_rmse = sqrt(mean(bias2)),
@@ -186,16 +182,18 @@ beta_more_weak_corr_df %>%
     geom_boxplot() +
     facet_grid(~n)
 
-beta_more_weak_corr_df %>% 
+p_bias_2 =
+  beta_more_weak_corr_df %>% 
   filter(n != 200) %>% 
   group_by(idx_sim, method, type, n) %>% 
   summarise(beta_rmse = sqrt(mean(bias2)),
             beta_bias_mean = mean(bias)) %>% 
   ggplot(aes(x = method, y = beta_bias_mean, color = type)) +
     geom_boxplot() +
-    facet_grid(~n)
+    facet_grid(~n) 
 
-beta_more_weak_corr_df %>% 
+p_rmse_2 = 
+  beta_more_weak_corr_df %>% 
   filter(n != 200) %>% 
   group_by(idx_sim, method, type, n) %>% 
   summarise(beta_rmse = sqrt(mean(bias2)),
@@ -204,6 +202,15 @@ beta_more_weak_corr_df %>%
     geom_boxplot() +
     facet_grid(~n)
 
+p_rmse_1 = 
+  beta_more_weak_corr_df %>% 
+  filter(n == 200) %>% 
+  group_by(idx_sim, method, type, n) %>% 
+  summarise(beta_rmse = sqrt(mean(bias2)),
+            beta_bias_mean = mean(bias)) %>% 
+  ggplot(aes(x = method, y = beta_rmse)) +
+    geom_boxplot() +
+    facet_grid(~n)
 
 
 confusion_matrix_df2 = 
@@ -438,10 +445,8 @@ g12 = confusion_matrix_type_df2 %>%
 
 
 # 1 Objectives 
-Design a simulation study to investigate and illustrate 
-how well each of the two methods in identifying weak and strong predictors;
-how missing “weak” predictors impacts the parameter estimations. 
-To do so, you need to simulate data with a combination of strong'',weak-but-correlated” and “weak-and- independent” predictors. 
+
+Design a simulation study to investigate and illustrate how well each of the two methods (Step-wise forward method and LASSO) are in identifying weak and strong predictors. Show how missing “weak” predictors impacts the parameter estimations. Generate simulated data with a combination of strong, weak-but-correlated and weak-and-independent predictors. 
 
 # 2 Statistical methods to be studied 
 
@@ -449,11 +454,11 @@ To do so, you need to simulate data with a combination of strong'',weak-but-corr
 
 Starting with the empty model, and iteratively adds the variables that best improves the model fit. That is often done by sequentially adding predictors with the largest reduction in AIC. For linear models,
 $$AIC=n\ln(\sum_{i=1}^n{(y_i-\widehat{y_i})}^2/n)+2p$$
-where $\widehat{y_i}$ is the fitted values from a model, and $p$ is the dimension of the model (i.e.,number of predictors plus 1).
+where $\widehat{y_i}$ is the fitted values from a model, and $p$ is the dimension of the model (i.e., number of predictors plus 1).
 
 ## 2.2 Automated LASSO regression LASSO
 
-another popular method for variable selection. It estimates the model parameters by optimizing a penalized loss function:
+LASSO is another popular method for variable selection. It estimates the model parameters by optimizing a penalized loss function:
 
 $$\underset\beta{min}\frac{1}{2n}\sum_{i=1}^n(y_i-x_i\beta)^2+\lambda\sum_{k=1}^p|\beta_k|$$
 where $\lambda$ is a tunning parameter. We use Cross-validation (CV) to select $\lambda$ for LASSO.
@@ -461,36 +466,11 @@ where $\lambda$ is a tunning parameter. We use Cross-validation (CV) to select $
 
 # 3 Scenarios to be investigated 
 
-* weak-to-strong predictor ratio;
-In this study, we want to simulate the situation where the predictors are having underlying correlation, we define certain scenarios to compute the robustness of 2 variable selection methods.
+In the simulation study, we fix the total number of predictors (p = 200), among which 100 are null predictors. The correlation coefficient between strong signals and weak but correlated signals is 0.5. Here we change the ratio of signal types $r$ and sample size $n$. 
 
-3.2 tuning parameter
-Sample size: 
-1) n = 200
-2) n = 1000
-3) n = 5000
-Strength predictors ratio:
- The total number of predictors are 200, where 100 are noise predictors. Here we consider 2 strength predictors ratio ( r: strength: weak_but_correlated: weak_and_independent )
-	1) r = 5:1:4
-	2) r = 5:3:2
-6 combinations of above parameters are the scenario to be studied 
+## Ratio of signal types
 
- 
-
-# 4 Methods for generating data 
-
- the simulated population needs to meet following characteristics：Firstly,the expectation of outcome variable is the linear combination of predictors with an constant-variance error term; Secondly, the predictors are mutually correlated, Thirdly, the parameters are distinctly correlated with outcome, which is classified by a critical value. The detailed definitions of data generating funcion parameters are as follows:
-
-## 4.1 Distribution of population
-
-True distribution of outcome variable is defined as 
-$$Y\sim N(\boldsymbol X\boldsymbol \beta, \sigma^2)$$
-
-Where $\boldsymbol X$ is the predictor matrix, $\boldsymbol \beta$ is the parameters vector and $\sigma^2$ is the constant variance in normal distribution.
-
-## 4.2 Predictor strenghth
-
-The strength of parameters are defined by following criterias:
+The strength of signals are defined by the following criteria:
 
 Definition of strong predictors:
 
@@ -499,18 +479,46 @@ $$S_1 = \left\{j:|\beta_j|>c\sqrt{\log(p)/n},some\ c>0,1\leq j\leq p\right\}$$
 Definition of weak but correlated predictors:
 
   $$S_2 = \left\{j:0<|\beta_j|\leq c\sqrt{\log(p)/n},some\ c>0,corr(X_i,X_{j'})\neq0,some\ j'\in S_1,1\leq j\leq p\right\}$$
+  
 Definition of weak and independent predictors:
 
 $$S_3 = \left\{j:0<|\beta_j|\leq c\sqrt{\log(p)/n},some\ c>0,corr(X_i,X_{j'})=0,all\ j'\in S_1,1\leq j\leq p\right\}$$
-Definition of noise:\
+
+Definition of null predictors:\
 $$S_4 = \left\{j:|\beta_j| = 0,1\leq j\leq p\right\}$$
 
-Parameters can be generated by 2 ways. Firstly, given beta by artificial setting, and secondly, by defining constant c, parameters are generated uniformly with in above ranges.
+Here we consider 2 ratios of predictor types (r: strength: weak_but_correlated: weak_and_independent)
+	1) r = 5:1:4
+	2) r = 5:3:2
 
-## 4.3 Parameter correlation
 
-The data of predictors are generated by R function `mvrnorm`. In order to change the correlation between different predictors, a pre-defined covariance matrix is passed to `mvrnorm` function. Here we consider a certain scenario: the strong variables and a certain ratio of weak variables are indepent to other variables, and other weak predictors are correlated with 1 specific strong variable. To ensure the positive definite attribute of covariance matrix, we restrict one strong predictor can only be correlated with one weak predictor.
+## Sample size
 
+The following 3 sample sizes are used in the simulation.
+
+1) n = 200
+2) n = 1000
+3) n = 5000
+
+We use n = 200 to test the robustness of the two methods facing high-dimensional data. We are also interested to see how the performance of the methods would improve with increased sample size.
+
+
+# 4 Methods for generating data 
+
+## 4.1 Data generation
+
+The data matrix `X` is generated by R function `MASS::mvrnorm`. A pre-defined covariance matrix is passed to `mvrnorm` function to specify the correlation between predictors. To ensure the positive definite attribute of covariance matrix, we restrict one strong predictor to be correlated with one weak predictor.
+
+## 4.2 True model Parameter  
+
+Linear model parameters are randomly generated from a uniform distribution, subject to the definition of signal strength and ratio of predictor types. All the coefficients are positive values.
+
+## 4.1 Generating true outcome Y
+
+True distribution of outcome variable is defined as 
+$$Y\sim N(\boldsymbol X^T\boldsymbol \beta, \sigma^2)$$
+
+Where $\boldsymbol X$ is the data matrix, $\boldsymbol \beta$ is the parameters vector and $\sigma^2$ is the constant variance in normal distribution. The variance is fixed at 9. 
 
 
 
@@ -530,18 +538,30 @@ Where precision is defined as above, and recall is defined as
 $$precision=\left(\frac{True\ positive}{True\ positive+False\ positive}\right)$$
 
 
-## 5.2 estimation performance
+## 5.2 Parameter Estimation performance
 
-To compare the paramater estimation performance, 3 indicators were calculated to evaluate the estimation: bias is calculated as the mean difference between true parameter and estimated parameters, variance is defined as the variance of the estimated parameter among simulation, and MSE
-
-By tuning parameters differently, robustness of the variable selection methods were also evaluated through the above indicators.
+To compare the paramater estimation performance, 3 indicators were calculated to evaluate the estimation: mean bias is calculated as the mean difference between true parameter and estimated parameters for a set of parameters, variance is defined as the variance of the estimated parameter among simulation. mean squared error (MSE) is also used to assess estimation performance.
 
 
-# 6 simulation results. 
+* bias
 
-## 6.1  identification performance
+$$\frac{1}{p}\sum_{j=1}^p(\hat{\boldsymbol\beta_j}-\boldsymbol\beta_j)$$
 
-F1 score (see Fig 1.) is used as an indicater for an overall performance assessment for identification signals. There is a clear trend for both methods that when the ratio of predictors to sample size is decreasing, the overal performance enhances, and there is no significant difference between this two methods when sample size is large enough comparing to predictor numbers, while in high dimensional occasion(where n = p), stepwise has a poor performance. 
+
+* variance 
+
+$$\frac{1}{p}\sum_{j=1}^p(\hat{\boldsymbol\beta_j}-\overline{\boldsymbol \beta_j})^2$$
+
+* MSE
+
+$$\frac{1}{p}\sum_{j=1}^p(\hat{\boldsymbol\beta_j}-\boldsymbol\beta_j)^2$$
+
+
+# 6 Simulation results
+
+## 6.1 Identification performance
+
+F1 score (see Fig 1.) is used as an indicator for an overall performance assessment for identification signals. There is a clear trend for both methods that when the ratio of predictors to sample size is decreasing, the overall performance enhances, and there is no significant difference between this two methods when sample size is large enough comparing to predictor numbers, while in high dimensional situation (where n = p), stepwise has a poor performance. 
 
 In terms of variable selection size (see Fig 2.) , lasso tends to choose more predictors while stepwise tend to choose less overall, in the settings of this report, where there are 100 true signals and 100 noises, lasso select more predictors than true occasion in all scenarios, while stepwise tends to choose less. When comparing in terms of sample size, lasso performs stably in both high dimensional(where n = p) and normal scenario, but stepwise tends lose its select ability when the ratio between number of parameters and sample size is large. 
 
@@ -551,30 +571,13 @@ Correspondingly, the specificity (see Fig 4.) for stepwise is relatively higher 
 
 Finally, comparing the accuracy of these two methods (see Fig 5.) , lasso performs better in every category of predictors in 6 settings. Above all, in terms of variable identification performance, lasso tends to over-select predictors and performs stable in high dimensional scenarios, while stepwise tends to under-select predictors with a lower overall performance and less accuracy. As compare to the correlation bettween predictors, there is also a clear trend that a lower correlation ratio of predictors tends to decrease the overall variance of identification performance, this may due to the high correlation between predictors may reduce the overall variance of the sample space and leads a more stable selection results.
 
+## 6.2 Parameter Estimation 
+
+When n = 200, the parameter estimate of stepwise selection is highly biased and unstable, while LASSO method has both low bias and variance for the esimation of all types of predictors. When n = 1000 and 5000, LASSO underestimates the coefficient of true signals, especially strong signals, while stepwise selection method is approximately unbiased in estimating strong signals. Stepwise selection also overestimates the effect of weak but correlated signals. Both methods overestimates the effect of null predictors.  
 
 
-6.2 Parameter Estimation 
 
-* bias
-
-$$\frac{1}{p}\sum_{i=1}^p(\hat{\boldsymbol\beta}-\boldsymbol\beta)$$
-
-
-* variance 
-
-$$\frac{1}{p}\sum_{i=1}^p(\hat{\boldsymbol\beta}-\overline{\boldsymbol \beta})^2$$
-
-* MSE
-
-$$\frac{1}{p}\sum_{i=1}^p(\hat{\boldsymbol\beta}-\boldsymbol\beta)^2$$
-
-1. bias
-
-
-2. rmse
-
-
-3. comparision of missing vs no missing
+## 6.3. comparision of missing vs no missing
 
 In this part, we will discuss how missing "weak" signals impact the coefficients in linear models. Due to the definition of "missing variables", we consider 2 situations. The first part is the original "no missing" models, which we have discussed above. The second part is the "missing" models, which were constructed by deleting the weak_but_correlated data and weak_independent data. After model constructions, we`d like to analyze the performance of "no missing" models and "missing" models.
 
@@ -595,7 +598,7 @@ As mentioned above, bias is an important criterion to assess model performance. 
 
 For lasso models and stepwise models, we find different result. For stepwise model, we can find the average of bias has very little difference between "missing" and "no missing" data. However, things become distinct for lasso models. With the "missing" data, we find lasso models perform better than "no missing" data, regardless of sample size. This significant difference may result from the different mechanism of model selection. For stepwise model, a variable will be decided to include in the model or not. On the other hand, the lasso model uses shrinkage method and considers the co-effect among all the variables. If a variable is not important, lasso model will gradually shrink its coefficient to 0 by considering the relationships for other variables. As a result, in model selection, lasso model is easy to be influenced by weak signals. On the contrary, stepwise model is robust for weak signals.
 
-2) rmse
+2) RMSE
 
 After we draw the conclusion of bias, we need to analyse the rmse for both models. As in Fig , we can see that with the increasing number of samples, the rmse for both models are becoming small, due to the decrease for both bias and variance.
 
@@ -625,6 +628,53 @@ g9/g10
 g11/g12
 ```
 
+```{r, echo = FALSE, fig.cap="Mean beta bias n = 200, 40 weak-but-correlated predictors", fig.height=7,fig.width= 7}
+p_bias_1
+```
+
+```{r, echo = FALSE, fig.cap="Mean beta bias n = 200, 40 weak-but-correlated predictors", fig.height=7,fig.width= 7}
+p_bias_2
+```
+
+```{r, echo = FALSE, fig.cap="Mean beta bias n = 1000, 2000", fig.height=7,fig.width= 7}
+p_rmse_1
+```
+
+```{r, echo = FALSE, fig.cap="Beta RMSE n = 1000, 2000", fig.height=7,fig.width= 7}
+p_rmse_2
+```
+
+```{r}
+temp_df %>% 
+  summarize(beta_rmse = sqrt(mean((coef-true_beta)^2)) ) %>% 
+  ggplot(aes(x = method, y = beta_rmse, color = coef_type)) +
+    geom_boxplot() +
+    facet_grid(~n)
+
+temp_df %>% 
+  filter(true_beta == unique(temp_df$true_beta)[3]) %>% 
+  ggplot(aes(x = method, y = bias, color = coef_type)) +
+    geom_boxplot()
 
 
+
+beta_missing_weak_combined %>% 
+  filter(n != "200") %>% 
+  filter(type == "strong") %>% 
+  group_by(idx_sim, method, n, coef_type) %>% 
+  summarize(beta_bias = mean(bias) ) %>% 
+  ggplot(aes(x = method, y = beta_bias, color = coef_type)) +
+    geom_boxplot() +
+    facet_grid(~n)
+
+bind_cols(beta_missing_weak, beta_missing_weak_new) %>% 
+  mutate(coef_diff = coefficient_new - coefficient) %>% 
+  filter(n != "200") %>%
+  filter(type == "strong") %>% 
+  group_by(idx_sim, method, n) %>% 
+  summarize(mean_coef_diff = mean(coef_diff) ) %>% 
+  ggplot(aes(x = method, y = mean_coef_diff)) +
+    geom_boxplot() +
+    facet_grid(~n) 
+```
 
