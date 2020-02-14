@@ -575,6 +575,7 @@ Finally, comparing the accuracy of these two methods (see Fig 5.) , lasso perfor
 
 When n = 200, the parameter estimate of stepwise selection is highly biased and unstable, while LASSO method has both low bias and variance for the esimation of all types of predictors. When n = 1000 and 5000, LASSO underestimates the coefficient of true signals, especially strong signals, while stepwise selection method is approximately unbiased in estimating strong signals. Stepwise selection also overestimates the effect of weak but correlated signals. Both methods overestimates the effect of null predictors.  
 
+In terms of RMSE, LASSO has higher RMSE in estimating strong signals, due to its high bias. For predictors other than strong signals, the RMSE of LASSO is much lower than stepwise selection. 
 
 
 ## 6.3. comparision of missing vs no missing
