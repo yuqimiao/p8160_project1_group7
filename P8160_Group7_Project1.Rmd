@@ -599,13 +599,13 @@ The procedure to construct models in 2 situations is as follows:
 
 1) bias
 
-As mentioned above, bias is an important criterion to assess model performance. As in Fig 12, we can see that with the increasing number of samples, the biases for both models are becoming small, because of the average effect on outliers. Another important criterion variance also shows negative relationship when sample size becomes large. So for both "missing" and "no missing" models, the large number of sample size has positive effect to decrease both bias and variance.
+As mentioned above, bias is an important criterion to assess model performance. As in Fig 11, we can see that with the increasing number of samples, the biases for both models are becoming small, because of the average effect on outliers. Another important criterion variance also shows negative relationship when sample size becomes large. So for both "missing" and "no missing" models, the large number of sample size has positive effect to decrease both bias and variance.
 
 For LASSO models and stepwise models, we find different result. For stepwise model, we can find the average of bias has very little difference between "missing" and "no missing" data. However, things become distinct for LASSO models. With the "missing" data, we find LASSO models perform better than "no missing" data, regardless of sample size. This significant difference may result from the different mechanism of model selection. For stepwise model, a variable will be decided to include in the model or not. On the other hand, the LASSO model uses shrinkage method and considers the co-effect among all the variables. If a variable is not important, LASSO model will gradually shrink its coefficient to 0 by considering the relationships for other variables. As a result, in model selection, LASSO model is easy to be influenced by weak signals. On the contrary, stepwise model is robust for weak signals.
 
 2) RMSE
 
-After we draw the conclusion of bias, we need to analyse the rmse for both models. As in Fig 12, we can see that with the increasing number of samples, the rmse for both models are becoming small, due to the decrease for both bias and variance.
+After we draw the conclusion of bias, we need to analyse the rmse for both models. As in Fig 10, we can see that with the increasing number of samples, the rmse for both models are becoming small, due to the decrease for both bias and variance.
 
 For LASSO models and stepwise models, we find the result same as bias. For stepwise model, the average of rmse has very little difference between "missing" and "no missing" data. However, the LASSO model has smaller rmse and large rmse variance with "missing" data. This result shows the disappearance of weak signals will improve the performance of LASSO model, and has little significance for stepwise.
 
