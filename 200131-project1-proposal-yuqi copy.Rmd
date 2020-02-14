@@ -101,18 +101,18 @@ confusion_matrix_type_df =
 
 confusion_matrix_df %>% 
   ggplot(aes(x = method, y = sensitivity, color = n)) +
-    geom_boxplot()
+    geom_boxplot()+
+  ggtitle("5:1:4 sensitivity")+ 
+  theme(legend.position = "bottom")
 
-g4 = confusion_matrix_type_df %>% 
-  ggplot(aes(x = method, y = sensitivity, color = type)) +
+confusion_matrix_type_df %>% 
+  ggplot(aes(x = method, y = sensitivity, color = n)) +
     geom_boxplot() +
-    facet_grid(~n) +
-  ggtitle("5:1:4 sensitivity")
+    facet_grid(~n) 
 
-g5 = confusion_matrix_df %>% 
-  ggplot(aes(x = method, y = specificity)) +
-    geom_boxplot() +
-    facet_grid(~n)+
+confusion_matrix_df %>% 
+  ggplot(aes(x = method, y = specificity,color = n)) +
+    geom_boxplot()+
   ggtitle("5:1:4 specificity")
 
 confusion_matrix_df %>% 
@@ -124,15 +124,18 @@ confusion_matrix_type_df %>%
     geom_boxplot() +
     facet_grid(~n)
 
-g6 =confusion_matrix_df %>% 
+confusion_matrix_df %>% 
   ggplot(aes(x = method, y = F1_score, color = n)) +
     geom_boxplot()+
   ggtitle("5:1:4 F1 score")
 
-g15 = confusion_matrix_type_df %>% 
+confusion_matrix_type_df %>% 
   ggplot(aes(x = method, y = sensitivity, color = type)) +
     geom_boxplot() +
-    facet_grid(~n)
+    facet_grid(~n)+ 
+  theme(legend.position = "bottom") +
+  ggtitle("5:1:4 sensitivity by type")
+  
 
 confusion_matrix_df %>% 
     ggplot(aes(x = method, y = n_selected, color = n)) +
@@ -235,22 +238,23 @@ confusion_matrix_type_df2 =
          precision = n_TP/n_selected,
          F1_score = 2/(1/precision + 1/sensitivity))
 
-g7 =confusion_matrix_df %>% 
+confusion_matrix_df %>% 
   ggplot(aes(x = method, y = sensitivity, color = n)) +
     geom_boxplot()+
-  ggtitle("5:3:2 sensitivity")
+  ggtitle("5:3:2 sensitivity")+ 
+  theme(legend.position = "bottom")
 
-g16 = confusion_matrix_type_df2 %>% 
+confusion_matrix_type_df2 %>% 
   ggplot(aes(x = method, y = sensitivity, color = type)) +
     geom_boxplot() +
     facet_grid(~n)+
-  ggtitle("5:3:2 sensitivity by type")
+  ggtitle("5:3:2 sensitivity by type")+ 
+  theme(legend.position = "bottom")
 
 
-g8 = confusion_matrix_df %>% 
-  ggplot(aes(x = method, y = specificity)) +
-    geom_boxplot() +
-    facet_grid(~n)+
+confusion_matrix_df %>% 
+  ggplot(aes(x = method, y = specificity,color = n)) +
+    geom_boxplot()+
   ggtitle("5:3:2, specificity")
 
 confusion_matrix_df %>% 
@@ -262,7 +266,7 @@ confusion_matrix_type_df2 %>%
     geom_boxplot() +
     facet_grid(~n)
 
-g9 = confusion_matrix_df %>% 
+confusion_matrix_df %>% 
   ggplot(aes(x = method, y = F1_score, color = n)) +
     geom_boxplot()+
   ggtitle("5:3:2, F1_score")
@@ -351,17 +355,85 @@ bind_cols(beta_missing_weak, beta_missing_weak_new) %>%
     geom_boxplot() +
     facet_grid(~n) 
 
-g13 = confusion_matrix_df %>% 
+
+```
+
+```{r,echo = FALSE}
+## identification plots
+g1 =confusion_matrix_df %>% 
+  ggplot(aes(x = method, y = F1_score, color = n)) +
+    geom_boxplot()+
+  ggtitle("5:1:4 F1 score")
+
+g2 = confusion_matrix_df %>% 
+  ggplot(aes(x = method, y = F1_score, color = n)) +
+    geom_boxplot()+
+  ggtitle("5:3:2, F1_score")
+
+g3 = confusion_matrix_df %>% 
   ggplot(aes(x = method, y = n_selected,color = n))+
   geom_boxplot()+
   ggtitle("5:1:4 model size")
     
-g14 = confusion_matrix_df2 %>% 
+g4 = confusion_matrix_df2 %>% 
   ggplot(aes(x = method, y = n_selected, color = n)) +
     geom_boxplot()+
     ggtitle("5:3:2 model size")
-```
 
+
+g5 = confusion_matrix_df %>% 
+  ggplot(aes(x = method, y = sensitivity, color = n)) +
+    geom_boxplot()+
+  ggtitle("5:1:4 sensitivity")+ 
+  theme(legend.position = "bottom")
+
+g6 =confusion_matrix_df %>% 
+  ggplot(aes(x = method, y = sensitivity, color = n)) +
+    geom_boxplot()+
+  ggtitle("5:3:2 sensitivity")+ 
+  theme(legend.position = "bottom")
+
+
+
+g7= confusion_matrix_type_df %>% 
+  ggplot(aes(x = method, y = sensitivity, color = type)) +
+    geom_boxplot() +
+    facet_grid(~n)+ 
+  theme(legend.position = "bottom") +
+  ggtitle("5:1:4 sensitivity by type")
+
+
+g8 = confusion_matrix_type_df2 %>% 
+  ggplot(aes(x = method, y = sensitivity, color = type)) +
+    geom_boxplot() +
+    facet_grid(~n)+
+  ggtitle("5:3:2 sensitivity by type")+ 
+  theme(legend.position = "bottom")
+
+
+g9 = confusion_matrix_df %>% 
+  ggplot(aes(x = method, y = specificity,color = n)) +
+    geom_boxplot()+
+  ggtitle("5:1:4 specificity")
+
+g10 = confusion_matrix_df %>% 
+  ggplot(aes(x = method, y = specificity,color = n)) +
+    geom_boxplot()+
+  ggtitle("5:3:2, specificity")
+
+
+g11 = confusion_matrix_type_df %>% 
+  ggplot(aes(x = method, y = accuracy, color = type)) +
+    geom_boxplot() +
+    facet_grid(~n)+
+    ggtitle("5:1:4 accuracy by type")
+
+g12 = confusion_matrix_type_df2 %>% 
+  ggplot(aes(x = method, y = accuracy, color = type)) +
+    geom_boxplot() +
+    facet_grid(~n)+
+    ggtitle("5:3:2 accuracy by type")
+```
 
 
 
@@ -384,7 +456,7 @@ where $\widehat{y_i}$ is the fitted values from a model, and $p$ is the dimensio
 another popular method for variable selection. It estimates the model parameters by optimizing a penalized loss function:
 
 $$\underset\beta{min}\frac{1}{2n}\sum_{i=1}^n(y_i-x_i\beta)^2+\lambda\sum_{k=1}^p|\beta_k|$$
-where $\lambda$ is a tunning parameter. Cross-validation (CV) is the most common selection criteria for LASSO.
+where $\lambda$ is a tunning parameter. We use Cross-validation (CV) to select $\lambda$ for LASSO.
 
 
 # 3 Scenarios to be investigated 
@@ -445,16 +517,12 @@ The data of predictors are generated by R function `mvrnorm`. In order to change
 # 5 performance measures 
 ## 5.1 Predictor identification performance
 
-1. define specification, sensitivity and interpretation
-2. put plots and compare in terms of 
-  * lasso/weak
-  * 6 scenario
-  
 In order to compare the identification performance for these 2 methods, we regard the identification as a classification problem, where the signal predictors are defined as positive and null predictors are defined as negative. 3 indicators have been established:
 
 $$ recall = sensitivity=\left(\frac{True\ positive}{True\ positive+False\ negative}\right)$$
 $$specificity=\left(\frac{True\ negative}{True\ negative+False\ positive}\right)$$
 
+$$accurcy=\frac{True\ selection}{total\ number\ of\ predictors}$$
 
 $$F_1=\left(\frac{2}{recall^{-1}+precision^{-1}}\right)$$
 Where precision is defined as above, and recall is defined as
@@ -473,37 +541,20 @@ By tuning parameters differently, robustness of the variable selection methods w
 
 ## 6.1  identification performance
 
-```{r,echo = FALSE, fig.cap="F1 score for 2 variable selection methods in 6 settings", fig.height=7,fig.width= 7}
-g6/g9
-```
+F1 score (see Fig 1.) is used as an indicater for an overall performance assessment for identification signals. There is a clear trend for both methods that when the ratio of predictors to sample size is decreasing, the overal performance enhances, and there is no significant difference between this two methods when sample size is large enough comparing to predictor numbers, while in high dimensional occasion(where n = p), stepwise has a poor performance. 
 
-F1 score is used as an indicater for an overall performance assessment for identification signals. There is no significant difference between this two methods when sample size is large. While in high dimensional occasion, stepwise has a poor performance.
+In terms of variable selection size (see Fig 2.) , lasso tends to choose more predictors while stepwise tend to choose less overall, in the settings of this report, where there are 100 true signals and 100 noises, lasso select more predictors than true occasion in all scenarios, while stepwise tends to choose less. When comparing in terms of sample size, lasso performs stably in both high dimensional(where n = p) and normal scenario, but stepwise tends lose its select ability when the ratio between number of parameters and sample size is large. 
 
-```{r,echo = FALSE,fig.cap="Model size for 2 variable selection methods in 6 settings", fig.height=7,fig.width= 7}
-g13/g14
-```
+Sensitivity (see Fig 3.)  is an indicator for how many predictors can be captured by the methods. For lasso, strong predictors can be perfectly captures in all scenario with stable performance, while for weak predictors, difference occurs when correlated-to-independent ratios change, for less correlated scenario, lasso tends to perform better to capture weak and independent predictors compare to weak but correlated predictors, while in more correlated case, there is no clear difference between these two types of predictors, and performance for capture weak but correlated predictors is relatively stable. For stepwise methods, except for the same stability for capture weak but correlated predictors in  more correlated scenario, there is no clear difference in different settings. When comparing the sensitivity of these 2 methods, lasso performs better overall but with a comparatively higher variance, and stepwise has a relatively poor performance in aspect of capturing weak predictors in all settings, but the performance stabilise at 0.1 to 0.25. 
 
-In terms of variable selection size, overal, lasso tend to choose more predictors while stepwise tend to choose less overall, especially in the settings in this report, where there are 100 true signals and 100 noises, lasso tend to select more predictors than true occasion, while stepwise tends to choose less. When comparing in terms of sample size, lasso performs stable in both high dimensional and normal scenario(where n = p), but stepwise tend to break when the ratio between number of parameters and sample size is large. 
+Correspondingly, the specificity (see Fig 4.) for stepwise is relatively higher since there is an overal trend for over-screening, but the specificity performance for lasso is also acceptable especially when the predictor-to-sample-size ratio decrease.
 
-```{r, echo = FALSE, fig.cap="Sensitivity for 2 variable selection methods in 6 settings", fig.height=7,fig.width= 7}
- (g4+g7)/(g15+g16)
-```
-
-When comparing the specificity of these 2 methods, lasso performs better overall since more predictors are chosen, when observing sensitivity in terms of predictors strength, both methods perform well for strong predictors when sample size is large enough, while for weak predictors, lasso still has a better performance
-
-
-
-```{r,echo = FALSE, fig.cap="Specificity for 2 variable selection methods in 6 settings", fig.height=7,fig.width= 7}
-g5/g8
-```
-
-
-
-
+Finally, comparing the accuracy of these two methods (see Fig 5.) , lasso performs better in every category of predictors in 6 settings. Above all, in terms of variable identification performance, lasso tends to over-select predictors and performs stable in high dimensional scenarios, while stepwise tends to under-select predictors with a lower overall performance and less accuracy. As compare to the correlation bettween predictors, there is also a clear trend that a lower correlation ratio of predictors tends to decrease the overall variance of identification performance, this may due to the high correlation between predictors may reduce the overall variance of the sample space and leads a more stable selection results.
 
 
 
 6.2 Parameter Estimation 
+
 * bias
 
 $$\frac{1}{p}\sum_{i=1}^p(\hat{\boldsymbol\beta}-\boldsymbol\beta)$$
@@ -524,5 +575,30 @@ $$\frac{1}{p}\sum_{i=1}^p(\hat{\boldsymbol\beta}-\boldsymbol\beta)^2$$
 
 
 3. comparision of missing vs no missing
+
+
+
+
+```{r,echo = FALSE, fig.cap="F1 score for 2 variable selection methods in 6 settings", fig.height=7,fig.width= 7}
+g1/g2
+```
+
+```{r,echo = FALSE,fig.cap="Model size for 2 variable selection methods in 6 settings", fig.height=7,fig.width= 7}
+g3/g4
+```
+
+```{r, echo = FALSE, fig.cap="Sensitivity for 2 variable selection methods in 6 settings", fig.height=7,fig.width= 9,warning=FALSE}
+ (g5+g6)/(g7+g8)
+```
+
+```{r,echo = FALSE, fig.cap="Specificity for 2 variable selection methods in 6 settings", fig.height= 7,fig.width= 7}
+g9/g10
+```
+
+```{r,echo = FALSE, fig.cap="Specificity for 2 variable selection methods in 6 settings", fig.height=7,fig.width= 7}
+g11/g12
+```
+
+
 
 
