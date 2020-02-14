@@ -320,8 +320,8 @@ beta_missing_weak_new <-
 
 beta_missing_weak_combined  = 
   beta_missing_weak %>% 
-  mutate(coefficient_new = beta_missing_weak_new$coefficient_new) %>% 
-  gather(key = "coef_type", value = "coef", c(coefficient, coefficient_new)) %>% 
+  mutate(coefficient_missing = beta_missing_weak_new$coefficient_new) %>% 
+  gather(key = "coef_type", value = "coef", c(coefficient, coefficient_missing)) %>% 
   mutate(bias = coef - true_beta) 
 
 temp_df = 
@@ -645,20 +645,24 @@ p_rmse_1
 p_rmse_2
 ```
 
-```{r}
+```{r,echo = FALSE, fig.cap="Beta RMSE comparison of with/without weak predictors", fig.height=7,fig.width= 7}
 temp_df %>% 
   summarize(beta_rmse = sqrt(mean((coef-true_beta)^2)) ) %>% 
   ggplot(aes(x = method, y = beta_rmse, color = coef_type)) +
     geom_boxplot() +
     facet_grid(~n)
+```
 
+
+```{r,echo = FALSE, fig.cap="Beta bias comparison of with/without weak predictors", fig.height=7,fig.width= 7}
 temp_df %>% 
   filter(true_beta == unique(temp_df$true_beta)[3]) %>% 
   ggplot(aes(x = method, y = bias, color = coef_type)) +
     geom_boxplot()
+```
 
 
-
+```{r,include = FALSE, fig.cap="Beta RMSE comparison of with/without weak predictors", fig.height=7,fig.width= 7}
 beta_missing_weak_combined %>% 
   filter(n != "200") %>% 
   filter(type == "strong") %>% 
