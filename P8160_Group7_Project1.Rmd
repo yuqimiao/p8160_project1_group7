@@ -470,7 +470,7 @@ where $\lambda$ is a tunning parameter. By forcing the sum of the absolute value
 In the simulation study, we fix the total number of predictors (p = 200), among which 100 are null predictors. The correlation coefficient between strong signals and weak but correlated signals is 0.5. Here we change the ratio of signal types $r$ and sample size $n$.   
 
 
-## Ratio of signal types
+## 3.1 Ratio of signal types
 
 The strength of signals are defined by the following criteria:
 
@@ -494,7 +494,7 @@ Here we consider 2 ratios of predictor types (r: strength: weak_but_correlated: 
 	2) r = 5:3:2
 
 
-## Sample size
+## 3.2 Sample size
 
 The following 3 sample sizes are used in the simulation.   
 
@@ -504,7 +504,7 @@ The following 3 sample sizes are used in the simulation.
 
 We use n = 200 to test the robustness of the two methods facing high-dimensional data. We are also interested to see how the performance of the methods would improve with increased sample size.   
    
-## Missing weak predictors
+## 3.3 Missing weak predictors
 For each scenario above, we also invistigated the case where those weak but correlated predictors are removed from the original data, thus trying to simulate the situation when weak but correlated predictors are not collected during the data collection process.   
 
 # 4 Methods for generating data 
@@ -565,15 +565,15 @@ $$\frac{1}{p}\sum_{j=1}^p(\hat{\boldsymbol\beta_j}-\boldsymbol\beta_j)^2$$
 
 ## 6.1 Identification performance
 
-F1 score (see Fig 1.) is used as an indicator for an overall performance assessment for identification signals. There is a clear trend for both methods that when the ratio of predictors to sample size is decreasing, the overall performance enhances, and there is no significant difference between this two methods when sample size is large enough comparing to predictor numbers, while in high dimensional situation (where n = p), stepwise has a poor performance. 
+F1 score (see Fig 1.) is used as an indicator for an overall performance assessment for identification signals. There is a clear trend for both methods that when the ratio of predictors to sample size is decreasing, the overall performance enhances, and there is no significant difference between this two methods when sample size is large enough compared to predictor numbers, while in high dimensional situation (where n = p), stepwise method has a poor performance. 
 
-In terms of variable selection size (see Fig 2.) , LASSO tends to choose more predictors while stepwise tend to choose less overall, in the settings of this report, where there are 100 true signals and 100 noises, LASSO select more predictors than true occasion in all scenarios, while stepwise tends to choose less. When comparing in terms of sample size, LASSO performs stably in both high dimensional(where n = p) and normal scenario, but stepwise tends lose its select ability when the ratio between number of parameters and sample size is large. 
+In terms of variable selection size (see Fig 2.) , LASSO tends to choose more predictors while stepwise tend to choose less overall,specifically in the settings of this report, where there are 100 true signals and 100 noises, LASSO selects more predictors than true occasion in all scenarios, while stepwise tends to choose less. When comparing in terms of sample size, LASSO performs stably in both high dimensional(where n = p) and normal scenario, but stepwise tends to lose its select ability when the ratio between number of parameters and sample size is large. 
 
-Sensitivity (see Fig 3.)  is an indicator for how many predictors can be captured by the methods. For LASSO, strong predictors can be perfectly captures in all scenario with stable performance, while for weak predictors, difference occurs when correlated-to-independent ratios change, for less correlated scenario, LASSO tends to perform better to capture weak and independent predictors compare to weak but correlated predictors, while in more correlated case, there is no clear difference between these two types of predictors, and performance for capture weak but correlated predictors is relatively stable. For stepwise methods, except for the same stability for capture weak but correlated predictors in  more correlated scenario, there is no clear difference in different settings. When comparing the sensitivity of these 2 methods, LASSO performs better overall but with a comparatively higher variance, and stepwise has a relatively poor performance in aspect of capturing weak predictors in all settings, but the performance stabilise at 0.1 to 0.25. 
+Sensitivity (see Fig 3.) is an indicator for how many predictors can be captured by the methods. For LASSO, strong predictors can be perfectly captures in all scenario with stable performance, while for weak predictors, difference occurs when correlated-to-independent ratios change. For less correlated scenario, LASSO tends to perform better to capture weak and independent predictors compare to weak but correlated predictors; while in more correlated case, there is no clear difference between these two types of predictors, and performance for capturing weak but correlated predictors is relatively stable. For stepwise methods, except for the same stability for capture weak but correlated predictors in  more correlated scenario, there is no clear difference in different settings. When comparing the sensitivity of these 2 methods, LASSO performs better overall but with a comparatively higher variance, and stepwise has a relatively poor performance in aspect of capturing weak predictors in all settings, but the performance stabilises at 0.1 to 0.25. 
 
-Correspondingly, the specificity (see Fig 4.) for stepwise is relatively higher since there is an overal trend for over-screening, but the specificity performance for LASSO is also acceptable especially when the predictor-to-sample-size ratio decrease.
+Correspondingly, the specificity (see Fig 4.) for stepwise method is relatively higher since there is an overal trend for over-screening, but the specificity performance for LASSO is also acceptable especially when the predictor-to-sample-size ratio decreases.
 
-Finally, comparing the accuracy of these two methods (see Fig 5.) , LASSO performs better in every category of predictors in 6 settings. Above all, in terms of variable identification performance, LASSO tends to over-select predictors and performs stable in high dimensional scenarios, while stepwise tends to under-select predictors with a lower overall performance and less accuracy. As compare to the correlation bettween predictors, there is also a clear trend that a lower correlation ratio of predictors tends to decrease the overall variance of identification performance, this may due to the high correlation between predictors may reduce the overall variance of the sample space and leads a more stable selection results.
+Finally, comparing the accuracy of these two methods (see Fig 5.) , LASSO performs better in every category of predictors in 6 settings. Above all, in terms of variable identification performance, LASSO tends to over-select predictors and performs stably in high dimensional scenarios, while stepwise tends to under-select predictors with a worse overall performance and less accuracy. As compare to the correlation bettween predictors, there is also a clear trend that a lower correlation ratio of predictors tends to decrease the overall variance of identification performance; this may due to the high correlation between predictors may reduce the overall variance of the sample space and leads a more stable selection results.
 
 ## 6.2 Parameter Estimation 
 
